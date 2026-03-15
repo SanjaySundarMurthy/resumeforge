@@ -21,8 +21,8 @@ import type {
   SectionKey,
   TemplateId,
   FontFamily,
-  DEFAULT_RESUME_DATA,
-  DEFAULT_STYLE,
+  JobDescription,
+  VersionSnapshot,
 } from '@/types/resume';
 
 import {
@@ -32,7 +32,7 @@ import {
 
 /* ── Editor State ────────────────────────────────────────── */
 
-type EditorTab = 'content' | 'design' | 'ats';
+type EditorTab = 'content' | 'design' | 'ats' | 'history';
 
 interface ResumeState {
   // Current resume
@@ -45,6 +45,12 @@ interface ResumeState {
   editorTab: EditorTab;
   previewScale: number;
   isDirty: boolean;
+
+  // Job description for ATS matching
+  jobDescription: JobDescription;
+
+  // Version history
+  versions: VersionSnapshot[];
 
   // All resumes
   documents: ResumeDocument[];
@@ -127,7 +133,20 @@ interface ResumeState {
   // Actions — Import/Export
   exportData: () => string;
   importData: (json: string) => void;
+  importResumeData: (data: Partial<ResumeData>) => void;
   loadSampleData: () => void;
+
+  // Actions — Job Description
+  setJobDescription: (jd: Partial<JobDescription>) => void;
+  clearJobDescription: () => void;
+
+  // Actions — Versions
+  saveVersion: (name?: string) => void;
+  restoreVersion: (id: string) => void;
+  deleteVersion: (id: string) => void;
+
+  // Computed
+  getCompletenessScore: () => number;
 }
 
 /* ── Helper: Reorder Array ───────────────────────────────── */
@@ -292,6 +311,8 @@ export const useResumeStore = create<ResumeState>()(
       previewScale: 0.6,
       isDirty: false,
       documents: [],
+      jobDescription: { title: '', company: '', text: '' },
+      versions: [],
 
       // Personal Info
       updatePersonalInfo: (info) =>
@@ -690,6 +711,59 @@ export const useResumeStore = create<ResumeState>()(
 
       loadSampleData: () =>
         set({ data: SAMPLE_DATA, isDirty: true }),
+
+      importResumeData: (partialData) =>
+        set((s) => ({ data: { ...s.data, ...partialData }, isDirty: true })),
+
+      setJobDescription: (jd) =>
+        set((s) => ({ jobDescription: { ...s.jobDescription, ...jd } })),
+
+      clearJobDescription: () =>
+        set({ jobDescription: { title: '', company: '', text: '' } }),
+
+      saveVersion: (name) =>
+        set((s) => {
+          const snap: VersionSnapshot = {
+            id: uuidv4(),
+            name: name || `Snapshot ${new Date().toLocaleString()}`,
+            timestamp: new Date().toISOString(),
+            data: JSON.parse(JSON.stringify(s.data)),
+            style: JSON.parse(JSON.stringify(s.style)),
+          };
+          return { versions: [snap, ...s.versions].slice(0, 20) };
+        }),
+
+      restoreVersion: (id) =>
+        set((s) => {
+          const snap = s.versions.find((v) => v.id === id);
+          if (!snap) return {};
+          return { data: snap.data, style: snap.style, isDirty: true };
+        }),
+
+      deleteVersion: (id) =>
+        set((s) => ({ versions: s.versions.filter((v) => v.id !== id) })),
+
+      getCompletenessScore: () => {
+        const { data } = get();
+        const pi = data.personalInfo;
+        let score = 0;
+        const total = 100;
+        if (pi.firstName && pi.lastName) score += 8;
+        if (pi.email) score += 8;
+        if (pi.phone) score += 5;
+        if (pi.location) score += 5;
+        if (pi.linkedin) score += 5;
+        if (pi.title) score += 5;
+        if (pi.github || pi.website) score += 4;
+        if (data.summary && data.summary.length > 50) score += 12;
+        if (data.experience.length > 0) score += data.experience.length >= 2 ? 15 : 10;
+        if (data.education.length > 0) score += 8;
+        if (data.skills.length > 0 && data.skills.some(s => s.items.length > 0)) score += 10;
+        if (data.projects.length > 0) score += 6;
+        if (data.certifications.length > 0) score += 5;
+        if (data.languages.length > 0) score += 4;
+        return Math.min(score, total);
+      },
     }),
     {
       name: 'resumeforge-storage',
@@ -698,6 +772,8 @@ export const useResumeStore = create<ResumeState>()(
         currentId: state.currentId,
         data: state.data,
         style: state.style,
+        jobDescription: state.jobDescription,
+        versions: state.versions,
       }),
     }
   )

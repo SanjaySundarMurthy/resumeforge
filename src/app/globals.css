@@ -101,6 +101,11 @@
     @apply absolute z-50 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg
       pointer-events-none whitespace-nowrap;
   }
+
+  /* Section label heading in panels */
+  .section-label {
+    @apply text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center;
+  }
 }
 
 /* ── Utilities ──────────────────────────────────────────── */

@@ -164,6 +164,8 @@ export type SectionKey =
   | 'references'
   | 'customSections';
 
+export type PageMode = 'auto' | 'single' | 'double' | 'triple';
+
 export interface ResumeStyle {
   template: TemplateId;
   primaryColor: string;
@@ -178,6 +180,14 @@ export interface ResumeStyle {
   sectionOrder: SectionKey[];
   hiddenSections: SectionKey[];
   pageMargin: number;
+  // Advanced formatting
+  pageMode: PageMode;
+  marginTop: number;
+  marginBottom: number;
+  marginLeft: number;
+  marginRight: number;
+  paragraphSpacing: number;
+  showPageBreakIndicators: boolean;
 }
 
 export interface ResumeDocument {
@@ -189,7 +199,44 @@ export interface ResumeDocument {
   updatedAt: string;
 }
 
+/* ── Job Description ────────────────────────────────────── */
+
+export interface JobDescription {
+  title: string;
+  company: string;
+  text: string;
+}
+
+/* ── Version History ─────────────────────────────────────── */
+
+export interface VersionSnapshot {
+  id: string;
+  name: string;
+  timestamp: string;
+  data: ResumeData;
+  style: ResumeStyle;
+  atsScore?: number;
+}
+
 /* ── ATS Score ───────────────────────────────────────────── */
+
+export type ATSSeverity = 'critical' | 'warning' | 'tip';
+
+export interface BrutalTip {
+  severity: ATSSeverity;
+  section: string;
+  message: string;
+  fix: string;
+  impact: number; // estimated score improvement if fixed
+}
+
+export interface KeywordAnalysis {
+  matched: string[];
+  missing: string[];
+  recommended: string[];
+  density: number;
+  verdict: string;
+}
 
 export interface ATSScore {
   score: number;
@@ -266,6 +313,13 @@ export const DEFAULT_STYLE: ResumeStyle = {
   ],
   hiddenSections: ['references', 'publications', 'volunteering', 'awards'],
   pageMargin: 40,
+  pageMode: 'auto',
+  marginTop: 48,
+  marginBottom: 48,
+  marginLeft: 56,
+  marginRight: 56,
+  paragraphSpacing: 4,
+  showPageBreakIndicators: true,
 };
 
 export const DEFAULT_RESUME_DATA: ResumeData = {
