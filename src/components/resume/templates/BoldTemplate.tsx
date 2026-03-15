@@ -10,9 +10,10 @@ export default function BoldTemplate({ data, style }: P) {
   const c = style.primaryColor;
   const hidden = new Set(style.hiddenSections);
   const order = style.sectionOrder.filter(s => !hidden.has(s));
+  const BASE_FONT = style.fontSize === 'small' ? 10 : style.fontSize === 'large' ? 12.5 : 11;
 
   return (
-    <div style={{ width: '794px', minHeight: '1123px', background: '#fff', fontFamily: style.fontFamily, fontSize: '11px', lineHeight: '1.55', color: '#1a1a1a' }}>
+    <div style={{ width: '794px', minHeight: '1123px', background: '#fff', fontFamily: style.fontFamily, fontSize: `${BASE_FONT}px`, lineHeight: style.lineHeight ?? 1.55, color: '#1a1a1a' }}>
       {/* ── HEADER — Bold split name ── */}
       <div style={{ padding: '40px 48px 28px', borderBottom: `6px solid ${c}` }}>
         <h1 style={{ fontSize: '42px', fontWeight: 900, margin: 0, lineHeight: 1 }}>
@@ -28,7 +29,7 @@ export default function BoldTemplate({ data, style }: P) {
       </div>
 
       {/* ── BODY ── */}
-      <div style={{ padding: '24px 48px' }}>
+      <div style={{ padding: `24px ${style.marginLeft ?? 48}px` }}>
         {order.map((key) => {
           switch (key) {
             case 'summary': return summary ? <Sec key={key} title="ABOUT ME" c={c}><p style={{ fontSize: '11.5px', lineHeight: '1.75', color: '#555', borderLeft: `4px solid ${c}20`, paddingLeft: '14px' }}>{summary}</p></Sec> : null;

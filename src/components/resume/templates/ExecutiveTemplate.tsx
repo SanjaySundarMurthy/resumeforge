@@ -10,9 +10,10 @@ export default function ExecutiveTemplate({ data, style }: P) {
   const c = style.primaryColor;
   const hidden = new Set(style.hiddenSections);
   const order = style.sectionOrder.filter(s => !hidden.has(s));
+  const BASE_FONT = style.fontSize === 'small' ? 10 : style.fontSize === 'large' ? 12.5 : 11;
 
   return (
-    <div style={{ width: '794px', minHeight: '1123px', background: '#fff', fontFamily: style.fontFamily, fontSize: '11px', lineHeight: '1.55', color: '#1a1a1a' }}>
+    <div style={{ width: '794px', minHeight: '1123px', background: '#fff', fontFamily: style.fontFamily, fontSize: `${BASE_FONT}px`, lineHeight: style.lineHeight ?? 1.55, color: '#1a1a1a' }}>
       {/* ── HEADER BANNER ── */}
       <div style={{ background: c, color: '#fff', padding: '36px 56px', position: 'relative' }}>
         <h1 style={{ fontSize: '30px', fontWeight: 700, margin: 0, letterSpacing: '1px' }}>{pi.firstName} {pi.lastName}</h1>
@@ -30,7 +31,7 @@ export default function ExecutiveTemplate({ data, style }: P) {
       </div>
 
       {/* ── BODY ── */}
-      <div style={{ padding: '32px 56px' }}>
+      <div style={{ padding: `32px ${style.marginLeft ?? 56}px` }}>
         {order.map((key) => {
           switch (key) {
             case 'summary': return summary ? <Sec key={key} title="Executive Summary" c={c}><p style={{ fontSize: '11px', lineHeight: '1.7', color: '#4b5563' }}>{summary}</p></Sec> : null;

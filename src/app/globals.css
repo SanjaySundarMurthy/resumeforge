@@ -143,6 +143,39 @@
   }
 }
 
+/* ── Missing landing-page utilities ─────────────────────── */
+@layer components {
+  /* Gradient text for hero headings */
+  .gradient-text {
+    background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 50%, #db2777 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Glassmorphism navbar */
+  .glass {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  /* Subtle grid background */
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(99, 102, 241, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  /* Subtle dots background */
+  .bg-dots {
+    background-image: radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+}
+
 /* ── Animations ─────────────────────────────────────────── */
 @keyframes slideInRight {
   from { transform: translateX(20px); opacity: 0; }
@@ -164,9 +197,15 @@
   50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
 }
 
-@keyframes slideUp {
-  from { transform: translate(-50%, 20px); opacity: 0; }
+/* Renamed to avoid conflict with Tailwind's slideUp (vertical only) */
+@keyframes toastSlide {
+  from { transform: translate(-50%, 16px); opacity: 0; }
   to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-24px); }
 }
 
 @keyframes bounceIn {
@@ -195,9 +234,12 @@
 .animate-slide-in-left  { animation: slideInLeft  0.3s ease-out; }
 .animate-fade-in        { animation: fadeIn        0.3s ease-out; }
 .animate-pulse-glow     { animation: pulse-glow   2s   infinite; }
-.animate-slide-up       { animation: slideUp      0.4s ease-out; }
+/* Toast-specific slide (has horizontal centering built-in) */
+.animate-toast-slide    { animation: toastSlide   0.4s ease-out both; }
 .animate-bounce-in      { animation: bounceIn     0.35s ease-out; }
 .animate-scale-pop      { animation: scalePop     0.3s ease-out; }
+/* Floating orbs on landing page */
+.animate-float          { animation: float 6s ease-in-out infinite; will-change: transform; }
 
 /* Template card entrance stagger */
 .template-stagger {

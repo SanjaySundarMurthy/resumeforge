@@ -11,9 +11,10 @@ export default function ElegantTemplate({ data, style }: P) {
   const hidden = new Set(style.hiddenSections);
   const order = style.sectionOrder.filter(s => !hidden.has(s));
   const serif = `'Georgia', 'Playfair Display', ${style.fontFamily}, serif`;
+  const BASE_FONT = style.fontSize === 'small' ? 10 : style.fontSize === 'large' ? 12.5 : 11;
 
   return (
-    <div style={{ width: '794px', minHeight: '1123px', padding: '52px 64px', background: '#fff', fontFamily: serif, fontSize: '11px', lineHeight: '1.65', color: '#2c2c2c' }}>
+    <div style={{ width: '794px', minHeight: '1123px', padding: `${style.marginTop ?? 52}px ${style.marginRight ?? 64}px ${style.marginBottom ?? 52}px ${style.marginLeft ?? 64}px`, background: '#fff', fontFamily: serif, fontSize: `${BASE_FONT}px`, lineHeight: style.lineHeight ?? 1.65, color: '#2c2c2c' }}>
       {/* ── HEADER — elegant, centered ── */}
       <div style={{ textAlign: 'center', marginBottom: '6px' }}>
         <h1 style={{ fontSize: '32px', fontWeight: 400, letterSpacing: '6px', margin: 0, textTransform: 'uppercase', color: '#222' }}>{pi.firstName} {pi.lastName}</h1>

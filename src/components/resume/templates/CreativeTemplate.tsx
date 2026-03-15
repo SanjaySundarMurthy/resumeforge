@@ -12,9 +12,10 @@ export default function CreativeTemplate({ data, style }: P) {
   const sideKeys = new Set(['skills', 'education', 'languages', 'certifications', 'awards', 'references']);
   const mainOrder = style.sectionOrder.filter(s => !hidden.has(s) && !sideKeys.has(s));
   const sideOrder = style.sectionOrder.filter(s => !hidden.has(s) && sideKeys.has(s));
+  const BASE_FONT = style.fontSize === 'small' ? 10 : style.fontSize === 'large' ? 12.5 : 11;
 
   return (
-    <div style={{ width: '794px', minHeight: '1123px', background: '#fff', fontFamily: style.fontFamily, fontSize: '11px', lineHeight: '1.55', color: '#1a1a1a' }}>
+    <div style={{ width: '794px', minHeight: '1123px', background: '#fff', fontFamily: style.fontFamily, fontSize: `${BASE_FONT}px`, lineHeight: style.lineHeight ?? 1.55, color: '#1a1a1a' }}>
       {/* ── TOP HEADER ── */}
       <div style={{ padding: '36px 44px 24px', borderBottom: `3px solid ${c}` }}>
         <h1 style={{ fontSize: '28px', fontWeight: 800, margin: 0, color: '#111' }}>{pi.firstName} <span style={{ color: c }}>{pi.lastName}</span></h1>
@@ -27,7 +28,7 @@ export default function CreativeTemplate({ data, style }: P) {
       {/* ── TWO-COLUMN BODY ── */}
       <div style={{ display: 'flex' }}>
         {/* ── LEFT MAIN (65%) ── */}
-        <div style={{ width: '65%', padding: '24px 24px 24px 44px' }}>
+        <div style={{ width: '65%', padding: `24px 24px 24px ${style.marginLeft ?? 44}px` }}>
           {mainOrder.map((key) => {
             switch (key) {
               case 'summary': return summary ? <MainSec key={key} title="About" c={c}><p style={{ fontSize: '11px', lineHeight: '1.7', color: '#555' }}>{summary}</p></MainSec> : null;

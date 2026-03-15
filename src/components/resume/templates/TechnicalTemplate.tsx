@@ -12,9 +12,10 @@ export default function TechnicalTemplate({ data, style }: P) {
   const order = style.sectionOrder.filter(s => !hidden.has(s));
 
   const mono = `'Consolas', 'Fira Code', ${style.fontFamily}, monospace`;
+  const BASE_FONT = style.fontSize === 'small' ? 10 : style.fontSize === 'large' ? 12.5 : 11;
 
   return (
-    <div style={{ width: '794px', minHeight: '1123px', background: '#fff', fontFamily: style.fontFamily, fontSize: '11px', lineHeight: '1.55', color: '#1f2937' }}>
+    <div style={{ width: '794px', minHeight: '1123px', background: '#fff', fontFamily: style.fontFamily, fontSize: `${BASE_FONT}px`, lineHeight: style.lineHeight ?? 1.55, color: '#1f2937' }}>
       {/* ── HEADER — Dark terminal-style ── */}
       <div style={{ background: '#1e1e2e', color: '#cdd6f4', padding: '32px 48px', position: 'relative' }}>
         {/* Fake terminal dots */}
@@ -41,7 +42,7 @@ export default function TechnicalTemplate({ data, style }: P) {
       </div>
 
       {/* ── BODY ── */}
-      <div style={{ padding: '28px 48px' }}>
+      <div style={{ padding: `28px ${style.marginLeft ?? 48}px` }}>
         {order.map((key) => {
           switch (key) {
             case 'summary': return summary ? <Sec key={key} title="about" c={c} mono={mono}><p style={{ fontSize: '11px', lineHeight: '1.7', color: '#6b7280', fontStyle: 'italic' }}>{summary}</p></Sec> : null;

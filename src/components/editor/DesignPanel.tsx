@@ -52,7 +52,7 @@ export default function DesignPanel() {
   const resetFormatting = () => {
     updateStyle({
       marginTop: 48, marginBottom: 48, marginLeft: 56, marginRight: 56,
-      paragraphSpacing: 4, lineHeight: 1.5, sectionSpacing: 24,
+      paragraphSpacing: 4, lineHeight: 1.5, sectionSpacing: 16,
       pageMode: 'auto', showPageBreakIndicators: true,
     });
   };
@@ -182,17 +182,22 @@ export default function DesignPanel() {
         {/* Font Size */}
         <p className="text-[10px] text-gray-500 mb-2 font-medium">Font Size</p>
         <div className="flex gap-2 mb-4">
-          {(['small', 'medium', 'large'] as const).map((sz) => (
+          {([
+            { id: 'small', label: 'Small', sample: 'Aa', px: '10px' },
+            { id: 'medium', label: 'Medium', sample: 'Aa', px: '11px' },
+            { id: 'large', label: 'Large', sample: 'Aa', px: '12.5px' },
+          ] as const).map((sz) => (
             <button
-              key={sz}
-              onClick={() => updateStyle({ fontSize: sz })}
-              className={`flex-1 py-2.5 rounded-xl border text-xs font-bold transition-all ${
-                style.fontSize === sz
+              key={sz.id}
+              onClick={() => updateStyle({ fontSize: sz.id })}
+              className={`flex-1 py-2 rounded-xl border text-center transition-all ${
+                style.fontSize === sz.id
                   ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
                   : 'border-gray-200 text-gray-600 hover:bg-gray-50'
               }`}
             >
-              {sz === 'small' ? 'S' : sz === 'medium' ? 'M' : 'L'}
+              <span style={{ fontSize: sz.px, fontFamily: style.fontFamily }} className="block font-semibold">{sz.sample}</span>
+              <span className="text-[9px] block mt-0.5">{sz.label}</span>
             </button>
           ))}
         </div>
@@ -228,15 +233,20 @@ export default function DesignPanel() {
                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                 }`}
               >
-                {/* Visual margin indicator */}
-                <div className={`w-full aspect-[5/7] rounded-md border-2 mb-1.5 relative ${
+                {/* Visual margin indicator — represents content area within page */}
+                <div className={`w-full aspect-[5/7] rounded-md border-2 mb-1.5 relative overflow-hidden ${
                   active ? 'border-blue-300' : 'border-gray-200'
                 }`}>
+                  {/* Page background */}
+                  <div className="absolute inset-0 bg-gray-50" />
+                  {/* Content area: inset based on margin preset values scaled to indicator box */}
                   <div
-                    className={`absolute rounded-sm ${active ? 'bg-blue-200' : 'bg-gray-100'}`}
+                    className={`absolute rounded-sm ${active ? 'bg-blue-200/80' : 'bg-gray-200/70'}`}
                     style={{
-                      top: `${(p.top / 96) * 50}%`, bottom: `${(p.bottom / 96) * 50}%`,
-                      left: `${(p.left / 96) * 50}%`, right: `${(p.right / 96) * 50}%`,
+                      top:    `${Math.round((p.top    / 96) * 35)}%`,
+                      bottom: `${Math.round((p.bottom / 96) * 35)}%`,
+                      left:   `${Math.round((p.left   / 96) * 35)}%`,
+                      right:  `${Math.round((p.right  / 96) * 35)}%`,
                     }}
                   />
                 </div>

@@ -9,9 +9,10 @@ export default function MinimalTemplate({ data, style }: P) {
   const { personalInfo: pi, summary, experience, education, skills, projects, certifications, languages, awards, volunteering, publications, references } = data;
   const hidden = new Set(style.hiddenSections);
   const order = style.sectionOrder.filter(s => !hidden.has(s));
+  const BASE_FONT = style.fontSize === 'small' ? 10 : style.fontSize === 'large' ? 12.5 : 11;
 
   return (
-    <div style={{ width: '794px', minHeight: '1123px', padding: '56px 72px', background: '#fff', fontFamily: style.fontFamily, fontSize: '11px', lineHeight: '1.6', color: '#2d2d2d' }}>
+    <div style={{ width: '794px', minHeight: '1123px', padding: `${style.marginTop ?? 56}px ${style.marginRight ?? 72}px ${style.marginBottom ?? 56}px ${style.marginLeft ?? 72}px`, background: '#fff', fontFamily: style.fontFamily, fontSize: `${BASE_FONT}px`, lineHeight: style.lineHeight ?? 1.6, color: '#2d2d2d' }}>
       {/* ── HEADER — centered, clean ── */}
       <div style={{ textAlign: 'center', marginBottom: '10px' }}>
         <h1 style={{ fontSize: '28px', fontWeight: 300, letterSpacing: '4px', margin: 0, textTransform: 'uppercase', color: '#111' }}>{pi.firstName} {pi.lastName}</h1>

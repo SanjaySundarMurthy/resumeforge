@@ -227,12 +227,32 @@ export default function BuilderPage() {
   const EditorComponent = SECTION_EDITORS[activeSection] || PersonalInfoEditor;
   const completenessColor = completeness >= 80 ? '#10b981' : completeness >= 60 ? '#3b82f6' : '#f59e0b';
 
+  /* ── Section completion helper ── */
+  const sectionHasContent = (key: string): boolean => {
+    const pi = data.personalInfo;
+    switch (key) {
+      case 'personalInfo': return !!(pi.firstName || pi.email);
+      case 'summary': return data.summary.length > 20;
+      case 'experience': return data.experience.length > 0;
+      case 'education': return data.education.length > 0;
+      case 'skills': return data.skills.length > 0 && data.skills.some(s => s.items.length > 0);
+      case 'projects': return data.projects.length > 0;
+      case 'certifications': return data.certifications.length > 0;
+      case 'languages': return data.languages.length > 0;
+      case 'awards': return data.awards.length > 0;
+      case 'volunteering': return data.volunteering.length > 0;
+      case 'publications': return data.publications.length > 0;
+      case 'references': return data.references.length > 0;
+      default: return false;
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col bg-gray-100">
 
       {/* ── Toast ── */}
       {notification && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-gray-900 text-white text-sm px-5 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-up">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-gray-900 text-white text-sm px-5 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 animate-toast-slide">
           <Check className="w-4 h-4 text-green-400" /> {notification}
         </div>
       )}
@@ -469,13 +489,17 @@ export default function BuilderPage() {
                       key={key}
                       onClick={() => setActiveSection(key as SectionKey | 'personalInfo')}
                       title={label}
-                      className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-r-lg text-[8px] leading-tight transition-all ${
+                      className={`relative flex flex-col items-center gap-0.5 py-2 px-1 rounded-r-lg text-[8px] leading-tight transition-all ${
                         activeSection === key
                           ? 'bg-blue-50 text-blue-600 border-l-2 border-blue-600'
                           : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 border-l-2 border-transparent'
                       }`}
                     >
                       {SECTION_ICONS[key]}
+                      {/* Green dot if section has content */}
+                      {sectionHasContent(key) && (
+                        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      )}
                     </button>
                   ))}
                 </div>

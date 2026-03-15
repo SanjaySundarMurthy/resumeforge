@@ -17,9 +17,9 @@ function Hero() {
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50/30 to-white" />
       <div className="absolute inset-0 bg-grid opacity-40" />
 
-      {/* Floating orbs */}
-      <div className="absolute top-20 left-10 w-72 h-72 bg-blue-400/10 rounded-full blur-3xl animate-float" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-400/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
+      {/* Floating orbs — use will-change + reduced blur for performance */}
+      <div className="absolute top-20 left-10 w-72 h-72 bg-blue-400/10 rounded-full blur-2xl animate-float" style={{ willChange: 'transform' }} />
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-400/10 rounded-full blur-2xl animate-float" style={{ animationDelay: '2s', willChange: 'transform' }} />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-28">
         <div className="text-center max-w-4xl mx-auto">

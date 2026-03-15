@@ -12,9 +12,10 @@ export default function ModernTemplate({ data, style }: P) {
   const sidebarSections = new Set(['skills', 'languages', 'certifications', 'awards', 'references']);
   const mainOrder = style.sectionOrder.filter(s => !hidden.has(s) && !sidebarSections.has(s));
   const sideOrder = style.sectionOrder.filter(s => !hidden.has(s) && sidebarSections.has(s));
+  const BASE_FONT = style.fontSize === 'small' ? 10 : style.fontSize === 'large' ? 12.5 : 11;
 
   return (
-    <div style={{ width: '794px', minHeight: '1123px', display: 'flex', background: '#fff', fontFamily: style.fontFamily, fontSize: '11px', lineHeight: '1.5', color: '#1a1a1a' }}>
+    <div style={{ width: '794px', minHeight: '1123px', display: 'flex', background: '#fff', fontFamily: style.fontFamily, fontSize: `${BASE_FONT}px`, lineHeight: style.lineHeight ?? 1.5, color: '#1a1a1a' }}>
       {/* ── LEFT SIDEBAR ── */}
       <div style={{ width: '250px', backgroundColor: c, color: '#fff', padding: '40px 24px', flexShrink: 0 }}>
         {/* Avatar initials */}
@@ -57,7 +58,7 @@ export default function ModernTemplate({ data, style }: P) {
       </div>
 
       {/* ── MAIN CONTENT ── */}
-      <div style={{ flex: 1, padding: '40px 36px' }}>
+      <div style={{ flex: 1, padding: `40px ${style.marginLeft ?? 36}px` }}>
         {mainOrder.map((key) => {
           switch (key) {
             case 'summary': return summary ? <MainSec key={key} title="About Me" c={c}><p style={{ fontSize: '11px', lineHeight: '1.65', color: '#4b5563' }}>{summary}</p></MainSec> : null;
