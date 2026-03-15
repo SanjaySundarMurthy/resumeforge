@@ -1,63 +1,45 @@
-/* ── ResumeForge — Builder Page ───────────────────────────── */
-
+/* ── ResumeForge — Builder Page ────────────────────────────── */
 'use client';
 
 import { useRef, useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { useResumeStore } from '@/store/useResumeStore';
+import { generatePDF, generatePNG } from '@/lib/pdf-generator';
+import { SECTION_LABELS } from '@/types/resume';
+import type { SectionKey } from '@/types/resume';
 import ResumePreview from '@/components/resume/ResumePreview';
 import DesignPanel from '@/components/editor/DesignPanel';
 import ATSScorePanel from '@/components/editor/ATSScorePanel';
 import {
-  PersonalInfoEditor,
-  SummaryEditor,
-  ExperienceEditor,
-  EducationEditor,
-  SkillsEditor,
-  ProjectsEditor,
-  CertificationsEditor,
-  LanguagesEditor,
-  AwardsEditor,
-  VolunteeringEditor,
-  PublicationsEditor,
-  ReferencesEditor,
+  PersonalInfoEditor, SummaryEditor, ExperienceEditor, EducationEditor,
+  SkillsEditor, ProjectsEditor, CertificationsEditor, LanguagesEditor,
+  AwardsEditor, VolunteeringEditor, PublicationsEditor, ReferencesEditor,
 } from '@/components/editor/SectionEditors';
 import {
-  FileText, User, AlignLeft, Briefcase, GraduationCap, Wrench,
-  FolderOpen, Award, Globe, Trophy, Heart, BookOpen, Users,
-  Palette, BarChart3, Download, Save, ZoomIn, ZoomOut, Plus,
-  ChevronDown, Upload, FileDown, Sparkles, ArrowLeft,
+  ArrowLeft, Download, FileImage, FileJson, Upload, Sparkles,
+  User, FileText, Briefcase, GraduationCap, Code2, FolderKanban,
+  Award, Languages, Star, Heart, BookOpen, Users, Palette, BarChart3,
+  ChevronDown, Undo2, Redo2, ZoomIn, ZoomOut, RotateCcw,
 } from 'lucide-react';
-import { downloadPDF } from '@/lib/pdf-generator';
-import { downloadText } from '@/lib/utils';
-import type { SectionKey } from '@/types/resume';
 
-/* ── Sidebar Navigation ──────────────────────────────────── */
+/* ── Section Icon Map ────────────────────────────────────── */
+const SECTION_ICONS: Record<string, React.ReactNode> = {
+  personalInfo: <User className="w-4 h-4" />,
+  summary: <FileText className="w-4 h-4" />,
+  experience: <Briefcase className="w-4 h-4" />,
+  education: <GraduationCap className="w-4 h-4" />,
+  skills: <Code2 className="w-4 h-4" />,
+  projects: <FolderKanban className="w-4 h-4" />,
+  certifications: <Award className="w-4 h-4" />,
+  languages: <Languages className="w-4 h-4" />,
+  awards: <Star className="w-4 h-4" />,
+  volunteering: <Heart className="w-4 h-4" />,
+  publications: <BookOpen className="w-4 h-4" />,
+  references: <Users className="w-4 h-4" />,
+};
 
-interface NavItem {
-  id: string;
-  label: string;
-  icon: React.FC<{ className?: string }>;
-}
-
-const contentNav: NavItem[] = [
-  { id: 'personalInfo', label: 'Personal Info', icon: User },
-  { id: 'summary', label: 'Summary', icon: AlignLeft },
-  { id: 'experience', label: 'Experience', icon: Briefcase },
-  { id: 'education', label: 'Education', icon: GraduationCap },
-  { id: 'skills', label: 'Skills', icon: Wrench },
-  { id: 'projects', label: 'Projects', icon: FolderOpen },
-  { id: 'certifications', label: 'Certifications', icon: Award },
-  { id: 'languages', label: 'Languages', icon: Globe },
-  { id: 'awards', label: 'Awards', icon: Trophy },
-  { id: 'volunteering', label: 'Volunteering', icon: Heart },
-  { id: 'publications', label: 'Publications', icon: BookOpen },
-  { id: 'references', label: 'References', icon: Users },
-];
-
-/* ── Section Renderer ────────────────────────────────────── */
-
-const sectionEditors: Record<string, React.FC> = {
+/* ── Editor Component Map ────────────────────────────────── */
+const SECTION_EDITORS: Record<string, React.ComponentType> = {
   personalInfo: PersonalInfoEditor,
   summary: SummaryEditor,
   experience: ExperienceEditor,
@@ -72,42 +54,57 @@ const sectionEditors: Record<string, React.FC> = {
   references: ReferencesEditor,
 };
 
-/* ── Builder Page Component ──────────────────────────────── */
+/* ── Tab type ────────────────────────────────────────────── */
+type Tab = 'content' | 'design' | 'ats';
 
+/* ─────────────────────────────────────────────────────────── */
 export default function BuilderPage() {
-  const resumeRef = useRef<HTMLDivElement>(null);
   const {
-    data, style, editorTab, activeSection,
-    setActiveSection, setEditorTab, saveDocument,
-    exportData, importData, loadSampleData,
+    data, style, activeSection, editorTab, previewScale,
+    setActiveSection, setEditorTab, setPreviewScale,
+    loadSampleData, exportData, importData,
   } = useResumeStore();
 
-  const [scale, setScale] = useState(0.55);
+  const resumeRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
-  const [showActions, setShowActions] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
-  // Handle PDF export
-  const handleExportPDF = useCallback(async () => {
-    if (!resumeRef.current) return;
+  /* ── Zoom helpers ── */
+  const zoomIn = useCallback(() => setPreviewScale(Math.min(previewScale + 0.1, 1.5)), [previewScale, setPreviewScale]);
+  const zoomOut = useCallback(() => setPreviewScale(Math.max(previewScale - 0.1, 0.3)), [previewScale, setPreviewScale]);
+  const zoomReset = useCallback(() => setPreviewScale(0.55), [setPreviewScale]);
+
+  /* ── Export handlers ── */
+  const handlePDF = useCallback(async () => {
     setExporting(true);
     try {
-      const name = `${data.personalInfo.firstName || 'Resume'}_${data.personalInfo.lastName || ''}_Resume`.replace(/\s+/g, '_');
-      await downloadPDF(resumeRef.current, `${name}.pdf`, { scale: 2 });
-    } catch (err) {
-      console.error('PDF export failed:', err);
-    } finally {
-      setExporting(false);
-    }
-  }, [data.personalInfo.firstName, data.personalInfo.lastName]);
+      const name = `${data.personalInfo.firstName || 'resume'}_${data.personalInfo.lastName || 'export'}`.replace(/\s+/g, '_');
+      await generatePDF(`${name}.pdf`);
+    } catch (e) { console.error('PDF export failed', e); }
+    finally { setExporting(false); setShowExportMenu(false); }
+  }, [data.personalInfo]);
 
-  // Handle JSON export
+  const handlePNG = useCallback(async () => {
+    setExporting(true);
+    try {
+      const name = `${data.personalInfo.firstName || 'resume'}_${data.personalInfo.lastName || 'export'}`.replace(/\s+/g, '_');
+      await generatePNG(`${name}.png`);
+    } catch (e) { console.error('PNG export failed', e); }
+    finally { setExporting(false); setShowExportMenu(false); }
+  }, [data.personalInfo]);
+
   const handleExportJSON = useCallback(() => {
     const json = exportData();
-    const name = `${data.personalInfo.firstName || 'resume'}_data.json`;
-    downloadText(json, name);
-  }, [data.personalInfo.firstName, exportData]);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'resume-data.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    setShowExportMenu(false);
+  }, [exportData]);
 
-  // Handle JSON import
   const handleImportJSON = useCallback(() => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -116,183 +113,169 @@ export default function BuilderPage() {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = (evt) => {
-        const text = evt.target?.result as string;
-        if (text) importData(text);
+      reader.onload = () => {
+        try { importData(reader.result as string); } catch { alert('Invalid JSON file'); }
       };
       reader.readAsText(file);
     };
     input.click();
   }, [importData]);
 
-  // Active section editor
-  const ActiveEditor = sectionEditors[activeSection] || PersonalInfoEditor;
-  const activeNavItem = contentNav.find((n) => n.id === activeSection);
+  /* ── Section nav items ── */
+  const sectionItems: { key: string; label: string }[] = [
+    { key: 'personalInfo', label: 'Personal Info' },
+    ...style.sectionOrder
+      .filter(s => !style.hiddenSections.includes(s))
+      .map(s => ({ key: s, label: SECTION_LABELS[s] })),
+  ];
+
+  const EditorComponent = SECTION_EDITORS[activeSection] || PersonalInfoEditor;
+
+  /* ── Close export menu on outside click ── */
+  useEffect(() => {
+    if (!showExportMenu) return;
+    const h = () => setShowExportMenu(false);
+    const timer = setTimeout(() => document.addEventListener('click', h), 0);
+    return () => { clearTimeout(timer); document.removeEventListener('click', h); };
+  }, [showExportMenu]);
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      {/* Top Bar */}
+    <div className="h-screen flex flex-col bg-gray-100">
+      {/* ───────── TOP BAR ───────── */}
       <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 shrink-0 z-20">
         <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors">
+          <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
             <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm font-medium hidden sm:inline">Back</span>
           </Link>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center">
-              <FileText className="w-3.5 h-3.5 text-white" />
-            </div>
-            <span className="font-bold text-gray-900">ResumeForge</span>
-          </div>
+          <div className="h-5 w-px bg-gray-200" />
+          <h1 className="text-sm font-bold text-gray-900">ResumeForge</h1>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex bg-gray-100 rounded-lg p-0.5">
-          {[
-            { id: 'content' as const, label: 'Content', icon: AlignLeft },
-            { id: 'design' as const, label: 'Design', icon: Palette },
-            { id: 'ats' as const, label: 'ATS Score', icon: BarChart3 },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setEditorTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                editorTab === tab.id
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <tab.icon className="w-3.5 h-3.5" />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Actions */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg px-1.5 py-0.5">
-            <button
-              onClick={() => setScale(Math.max(0.3, scale - 0.1))}
-              className="p-1 text-gray-500 hover:text-gray-700"
-              title="Zoom out"
-            >
-              <ZoomOut className="w-3.5 h-3.5" />
-            </button>
-            <span className="text-xs text-gray-500 w-10 text-center">{Math.round(scale * 100)}%</span>
-            <button
-              onClick={() => setScale(Math.min(1, scale + 0.1))}
-              className="p-1 text-gray-500 hover:text-gray-700"
-              title="Zoom in"
-            >
-              <ZoomIn className="w-3.5 h-3.5" />
-            </button>
+          {/* Zoom controls */}
+          <div className="hidden md:flex items-center gap-1 mr-2">
+            <button onClick={zoomOut} className="btn-ghost p-1.5" title="Zoom out"><ZoomOut className="w-4 h-4" /></button>
+            <span className="text-xs text-gray-500 w-10 text-center">{Math.round(previewScale * 100)}%</span>
+            <button onClick={zoomIn} className="btn-ghost p-1.5" title="Zoom in"><ZoomIn className="w-4 h-4" /></button>
+            <button onClick={zoomReset} className="btn-ghost p-1.5" title="Fit"><RotateCcw className="w-3.5 h-3.5" /></button>
           </div>
 
-          {/* More actions dropdown */}
+          <button onClick={loadSampleData} className="btn-ghost text-xs gap-1.5" title="Load sample data">
+            <Sparkles className="w-3.5 h-3.5" /> Sample
+          </button>
+
+          <button onClick={handleImportJSON} className="btn-ghost text-xs gap-1.5" title="Import JSON">
+            <Upload className="w-3.5 h-3.5" /> Import
+          </button>
+
+          {/* Export dropdown */}
           <div className="relative">
             <button
-              onClick={() => setShowActions(!showActions)}
-              className="btn-ghost text-xs px-2.5 py-1.5"
+              onClick={(e) => { e.stopPropagation(); setShowExportMenu(!showExportMenu); }}
+              disabled={exporting}
+              className="btn-primary text-xs gap-1.5"
             >
-              <ChevronDown className="w-3.5 h-3.5" />
+              <Download className="w-3.5 h-3.5" /> {exporting ? 'Exporting…' : 'Export'} <ChevronDown className="w-3 h-3" />
             </button>
-            {showActions && (
-              <>
-                <div className="fixed inset-0 z-30" onClick={() => setShowActions(false)} />
-                <div className="absolute right-0 mt-1 w-52 bg-white rounded-xl border border-gray-200 shadow-xl py-1.5 z-40">
-                  <button onClick={() => { loadSampleData(); setShowActions(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">
-                    <Sparkles className="w-3.5 h-3.5 text-blue-500" /> Load Sample Data
-                  </button>
-                  <button onClick={() => { saveDocument(); setShowActions(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">
-                    <Save className="w-3.5 h-3.5" /> Save Resume
-                  </button>
-                  <hr className="my-1 border-gray-100" />
-                  <button onClick={() => { handleExportJSON(); setShowActions(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">
-                    <FileDown className="w-3.5 h-3.5" /> Export JSON
-                  </button>
-                  <button onClick={() => { handleImportJSON(); setShowActions(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">
-                    <Upload className="w-3.5 h-3.5" /> Import JSON
-                  </button>
-                </div>
-              </>
+
+            {showExportMenu && (
+              <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-50 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+                <button onClick={handlePDF} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                  <Download className="w-4 h-4 text-red-500" /> Download PDF
+                </button>
+                <button onClick={handlePNG} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                  <FileImage className="w-4 h-4 text-blue-500" /> Download PNG
+                </button>
+                <div className="border-t border-gray-100 my-1" />
+                <button onClick={handleExportJSON} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                  <FileJson className="w-4 h-4 text-green-500" /> Export JSON
+                </button>
+              </div>
             )}
           </div>
-
-          <button
-            onClick={handleExportPDF}
-            disabled={exporting}
-            className="btn-primary text-xs px-4 py-2"
-          >
-            <Download className="w-3.5 h-3.5" />
-            {exporting ? 'Exporting...' : 'Download PDF'}
-          </button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar — Section Nav (content tab only) */}
-        {editorTab === 'content' && (
-          <aside className="w-48 bg-white border-r border-gray-200 overflow-y-auto shrink-0">
-            <nav className="p-2 space-y-0.5">
-              {contentNav.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveSection(item.id as SectionKey | 'personalInfo')}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-left transition-all ${
-                    activeSection === item.id
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent'
-                  }`}
-                >
-                  <item.icon className="w-4 h-4 shrink-0" />
-                  {item.label}
-                </button>
-              ))}
-            </nav>
-          </aside>
-        )}
+      {/* ───────── MAIN CONTENT ───────── */}
+      <div className="flex-1 flex overflow-hidden">
 
-        {/* Editor Panel */}
-        <div className="w-[380px] bg-white border-r border-gray-200 overflow-y-auto shrink-0">
-          <div className="p-4">
+        {/* ─── LEFT PANEL: Editor ─── */}
+        <div className="w-[420px] bg-white border-r border-gray-200 flex flex-col shrink-0">
+          {/* Tab Bar */}
+          <div className="flex border-b border-gray-200 shrink-0">
+            {([
+              { key: 'content' as Tab, label: 'Content', icon: <FileText className="w-3.5 h-3.5" /> },
+              { key: 'design' as Tab, label: 'Design', icon: <Palette className="w-3.5 h-3.5" /> },
+              { key: 'ats' as Tab, label: 'ATS Score', icon: <BarChart3 className="w-3.5 h-3.5" /> },
+            ]).map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setEditorTab(tab.key)}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition-all ${
+                  editorTab === tab.key ? 'tab-active' : 'tab-inactive'
+                }`}
+              >
+                {tab.icon} {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto scrollbar-thin">
             {editorTab === 'content' && (
-              <>
-                <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  {activeNavItem && <activeNavItem.icon className="w-4 h-4 text-blue-600" />}
-                  {activeNavItem?.label || 'Personal Info'}
-                </h2>
-                <ActiveEditor />
-              </>
+              <div className="flex">
+                {/* Section nav sidebar — always visible */}
+                <div className="w-12 sm:w-14 bg-gray-50 border-r border-gray-100 shrink-0 py-2 flex flex-col gap-0.5">
+                  {sectionItems.map(({ key, label }) => (
+                    <button
+                      key={key}
+                      onClick={() => setActiveSection(key as SectionKey | 'personalInfo')}
+                      className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-r-lg text-[8px] leading-tight transition-all ${
+                        activeSection === key
+                          ? 'bg-blue-50 text-blue-600 border-l-2 border-blue-600'
+                          : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 border-l-2 border-transparent'
+                      }`}
+                      title={label}
+                    >
+                      {SECTION_ICONS[key]}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Active editor */}
+                <div className="flex-1 p-4 animate-fade-in">
+                  <h2 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    {SECTION_ICONS[activeSection]}
+                    {activeSection === 'personalInfo' ? 'Personal Info' : SECTION_LABELS[activeSection as SectionKey]}
+                  </h2>
+                  <EditorComponent />
+                </div>
+              </div>
             )}
+
             {editorTab === 'design' && (
-              <>
-                <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Palette className="w-4 h-4 text-blue-600" />
-                  Design & Layout
-                </h2>
+              <div className="p-4 animate-fade-in">
                 <DesignPanel />
-              </>
+              </div>
             )}
+
             {editorTab === 'ats' && (
-              <>
-                <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-blue-600" />
-                  ATS Score
-                </h2>
+              <div className="p-4 animate-fade-in">
                 <ATSScorePanel />
-              </>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Preview Panel */}
-        <div className="flex-1 overflow-auto bg-gray-100/70 flex justify-center p-8">
-          <div className="inline-block">
+        {/* ─── RIGHT PANEL: Preview ─── */}
+        <div className="flex-1 overflow-auto bg-gray-100 p-6 flex justify-center">
+          <div className="animate-fade-in">
             <ResumePreview
               ref={resumeRef}
               data={data}
               style={style}
-              scale={scale}
+              scale={previewScale}
             />
           </div>
         </div>

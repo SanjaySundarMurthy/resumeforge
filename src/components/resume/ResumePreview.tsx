@@ -1,9 +1,9 @@
-/* ── ResumeForge — Resume Preview Component ──────────────── */
-
+/* ── ResumePreview — Renders current template with visual scale ── */
 'use client';
 
-import { forwardRef } from 'react';
+import React, { forwardRef } from 'react';
 import type { ResumeData, ResumeStyle, TemplateId } from '@/types/resume';
+
 import ProfessionalTemplate from './templates/ProfessionalTemplate';
 import ModernTemplate from './templates/ModernTemplate';
 import MinimalTemplate from './templates/MinimalTemplate';
@@ -13,14 +13,7 @@ import TechnicalTemplate from './templates/TechnicalTemplate';
 import ElegantTemplate from './templates/ElegantTemplate';
 import BoldTemplate from './templates/BoldTemplate';
 
-interface Props {
-  data: ResumeData;
-  style: ResumeStyle;
-  scale?: number;
-  className?: string;
-}
-
-const TEMPLATE_MAP: Record<TemplateId, React.FC<{ data: ResumeData; style: ResumeStyle }>> = {
+const templateMap: Record<TemplateId, React.ComponentType<{ data: ResumeData; style: ResumeStyle }>> = {
   professional: ProfessionalTemplate,
   modern: ModernTemplate,
   minimal: MinimalTemplate,
@@ -31,20 +24,49 @@ const TEMPLATE_MAP: Record<TemplateId, React.FC<{ data: ResumeData; style: Resum
   bold: BoldTemplate,
 };
 
-const ResumePreview = forwardRef<HTMLDivElement, Props>(
+interface ResumePreviewProps {
+  data: ResumeData;
+  style: ResumeStyle;
+  scale?: number;
+  className?: string;
+}
+
+/**
+ * Wrapper that renders the chosen template at 1:1 pixel size (794×1123 = A4 at 96dpi).
+ * Visual scaling is done on an OUTER wrapper so the inner element stays pixel-perfect
+ * for html2canvas capture.
+ */
+const ResumePreview = forwardRef<HTMLDivElement, ResumePreviewProps>(
   ({ data, style, scale = 1, className = '' }, ref) => {
-    const Template = TEMPLATE_MAP[style.template] || ProfessionalTemplate;
+    const Template = templateMap[style.template] || ProfessionalTemplate;
 
     return (
-      <div className={`inline-block origin-top-left ${className}`} style={{ transform: `scale(${scale})` }}>
-        <div ref={ref} id="resume-preview">
+      <div
+        className={className}
+        style={{
+          width: `${794 * scale}px`,
+          height: 'auto',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          ref={ref}
+          id="resume-preview"
+          style={{
+            transformOrigin: 'top left',
+            transform: `scale(${scale})`,
+            width: '794px',
+            minHeight: '1123px',
+            background: '#fff',
+            boxShadow: scale < 1 ? 'none' : '0 4px 24px rgba(0,0,0,0.08)',
+          }}
+        >
           <Template data={data} style={style} />
         </div>
       </div>
     );
-  }
+  },
 );
 
 ResumePreview.displayName = 'ResumePreview';
-
 export default ResumePreview;

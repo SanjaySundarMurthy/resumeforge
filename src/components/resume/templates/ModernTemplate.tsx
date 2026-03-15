@@ -1,228 +1,102 @@
-/* ── Modern Template ──────────────────────────────────────── */
-/* Contemporary, vibrant, eye-catching. Best for: Tech, Startups, Marketing */
-
+/* ── Modern Template — TWO-COLUMN with Colored Sidebar ───── */
 'use client';
-
 import type { ResumeData, ResumeStyle } from '@/types/resume';
 import { formatDateRange, formatDate } from '@/lib/utils';
 
-interface TemplateProps {
-  data: ResumeData;
-  style: ResumeStyle;
-}
+interface P { data: ResumeData; style: ResumeStyle; }
 
-export default function ModernTemplate({ data, style }: TemplateProps) {
-  const { personalInfo: pi, summary, experience, education, skills, projects, certifications, languages, awards, volunteering, publications } = data;
-  const color = style.primaryColor;
+export default function ModernTemplate({ data, style }: P) {
+  const { personalInfo: pi, summary, experience, education, skills, projects, certifications, languages, awards, volunteering, publications, references } = data;
+  const c = style.primaryColor;
   const hidden = new Set(style.hiddenSections);
+  const sidebarSections = new Set(['skills', 'languages', 'certifications', 'awards', 'references']);
+  const mainOrder = style.sectionOrder.filter(s => !hidden.has(s) && !sidebarSections.has(s));
+  const sideOrder = style.sectionOrder.filter(s => !hidden.has(s) && sidebarSections.has(s));
 
   return (
-    <div className="resume-page" style={{ fontFamily: style.fontFamily }}>
-      {/* Header with colored background */}
-      <header className="rounded-lg p-5 mb-5 -mx-2 -mt-2" style={{ backgroundColor: color + '0a' }}>
-        <h1 className="text-[28px] font-bold" style={{ color }}>
-          {pi.firstName} {pi.lastName}
-        </h1>
-        {pi.title && (
-          <p className="text-[14px] text-gray-600 mt-0.5 font-medium">{pi.title}</p>
-        )}
-        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3">
-          {[pi.email, pi.phone, pi.location, pi.linkedin, pi.github, pi.website]
-            .filter(Boolean)
-            .map((info, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center text-[10px] px-2 py-0.5 rounded-full"
-                style={{ backgroundColor: color + '12', color: color }}
-              >
-                {info}
-              </span>
-            ))}
+    <div style={{ width: '794px', minHeight: '1123px', display: 'flex', background: '#fff', fontFamily: style.fontFamily, fontSize: '11px', lineHeight: '1.5', color: '#1a1a1a' }}>
+      {/* ── LEFT SIDEBAR ── */}
+      <div style={{ width: '250px', backgroundColor: c, color: '#fff', padding: '40px 24px', flexShrink: 0 }}>
+        {/* Avatar initials */}
+        <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 700, marginBottom: '16px' }}>
+          {(pi.firstName?.[0] || '')}{(pi.lastName?.[0] || '')}
         </div>
-      </header>
+        <h1 style={{ fontSize: '22px', fontWeight: 700, lineHeight: '1.2', margin: 0 }}>{pi.firstName}<br/>{pi.lastName}</h1>
+        {pi.title && <p style={{ fontSize: '11px', opacity: 0.85, marginTop: '4px', fontWeight: 500 }}>{pi.title}</p>}
 
-      {style.sectionOrder.filter((s) => !hidden.has(s)).map((section) => {
-        switch (section) {
-          case 'summary':
-            return summary ? (
-              <ModernSection key={section} title="About Me" color={color}>
-                <p className="text-[11px] leading-[1.6] text-gray-700">{summary}</p>
-              </ModernSection>
-            ) : null;
+        {/* Contact */}
+        <div style={{ marginTop: '24px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '16px' }}>
+          <h3 style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '2px', opacity: 0.6, marginBottom: '8px' }}>CONTACT</h3>
+          {[pi.email, pi.phone, pi.location, pi.linkedin, pi.github, pi.website].filter(Boolean).map((info, i) => (
+            <p key={i} style={{ fontSize: '9.5px', opacity: 0.9, margin: '3px 0', wordBreak: 'break-all' }}>{info}</p>
+          ))}
+        </div>
 
-          case 'experience':
-            return experience.length > 0 ? (
-              <ModernSection key={section} title="Work Experience" color={color}>
-                {experience.map((exp, i) => (
-                  <div key={exp.id} className={i > 0 ? 'mt-3.5 pt-3.5 border-t border-gray-100' : ''}>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-bold text-[12px] text-gray-900">{exp.position}</h3>
-                        <p className="text-[11px] font-medium" style={{ color }}>{exp.company}{exp.location ? ` · ${exp.location}` : ''}</p>
-                      </div>
-                      <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded shrink-0 ml-2">
-                        {formatDateRange(exp.startDate, exp.endDate, exp.current)}
-                      </span>
-                    </div>
-                    {exp.highlights.filter(Boolean).length > 0 && (
-                      <ul className="mt-1.5 space-y-1">
-                        {exp.highlights.filter(Boolean).map((h, j) => (
-                          <li key={j} className="text-[10.5px] text-gray-700 flex items-start gap-2">
-                            <span className="mt-[5px] w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color + '40' }} />
-                            <span>{h}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
-              </ModernSection>
-            ) : null;
+        {/* Sidebar sections */}
+        {sideOrder.map((key) => {
+          switch (key) {
+            case 'skills': return skills.length > 0 ? <SideBar key={key} title="SKILLS">{skills.map((s) => (
+              <div key={s.id} style={{ marginBottom: '10px' }}>
+                <p style={{ fontSize: '10px', fontWeight: 700, opacity: 0.7, letterSpacing: '0.5px', marginBottom: '4px' }}>{s.category}</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>{s.items.map((item, j) => (
+                  <span key={j} style={{ fontSize: '9px', padding: '2px 8px', borderRadius: '10px', background: 'rgba(255,255,255,0.15)', display: 'inline-block' }}>{item}</span>
+                ))}</div>
+              </div>
+            ))}</SideBar> : null;
+            case 'languages': return languages.length > 0 ? <SideBar key={key} title="LANGUAGES">{languages.map((l) => (
+              <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', margin: '3px 0' }}><span>{l.language}</span><span style={{ opacity: 0.7 }}>{l.proficiency}</span></div>
+            ))}</SideBar> : null;
+            case 'certifications': return certifications.length > 0 ? <SideBar key={key} title="CERTIFICATIONS">{certifications.map((cert) => (
+              <div key={cert.id} style={{ marginBottom: '6px' }}><p style={{ fontSize: '10px', fontWeight: 600 }}>{cert.name}</p><p style={{ fontSize: '9px', opacity: 0.7 }}>{cert.issuer} · {formatDate(cert.date)}</p></div>
+            ))}</SideBar> : null;
+            case 'awards': return awards.length > 0 ? <SideBar key={key} title="AWARDS">{awards.map((a) => <p key={a.id} style={{ fontSize: '10px', margin: '3px 0' }}>{a.title}</p>)}</SideBar> : null;
+            case 'references': return references.length > 0 ? <SideBar key={key} title="REFERENCES">{references.map((r) => <div key={r.id} style={{ marginBottom: '6px', fontSize: '9.5px' }}><p style={{ fontWeight: 600 }}>{r.name}</p><p style={{ opacity: 0.7 }}>{r.position}, {r.company}</p></div>)}</SideBar> : null;
+            default: return null;
+          }
+        })}
+      </div>
 
-          case 'education':
-            return education.length > 0 ? (
-              <ModernSection key={section} title="Education" color={color}>
-                {education.map((edu) => (
-                  <div key={edu.id} className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-bold text-[12px] text-gray-900">
-                        {edu.degree}{edu.field ? ` in ${edu.field}` : ''}
-                      </h3>
-                      <p className="text-[11px]" style={{ color }}>{edu.institution}</p>
-                      {edu.gpa && <p className="text-[10px] text-gray-400">GPA: {edu.gpa}</p>}
-                    </div>
-                    <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded">
-                      {formatDateRange(edu.startDate, edu.endDate, false)}
-                    </span>
-                  </div>
-                ))}
-              </ModernSection>
-            ) : null;
-
-          case 'skills':
-            return skills.length > 0 ? (
-              <ModernSection key={section} title="Skills" color={color}>
-                <div className="space-y-2">
-                  {skills.map((cat) => (
-                    <div key={cat.id}>
-                      <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">{cat.category}</h4>
-                      <div className="flex flex-wrap gap-1">
-                        {cat.items.map((item, j) => (
-                          <span
-                            key={j}
-                            className="text-[10px] px-2 py-0.5 rounded-md"
-                            style={{ backgroundColor: color + '10', color: color + 'cc' }}
-                          >
-                            {item}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+      {/* ── MAIN CONTENT ── */}
+      <div style={{ flex: 1, padding: '40px 36px' }}>
+        {mainOrder.map((key) => {
+          switch (key) {
+            case 'summary': return summary ? <MainSec key={key} title="About Me" c={c}><p style={{ fontSize: '11px', lineHeight: '1.65', color: '#4b5563' }}>{summary}</p></MainSec> : null;
+            case 'experience': return experience.length > 0 ? <MainSec key={key} title="Work Experience" c={c}>{experience.map((e, i) => (
+              <div key={e.id} style={{ marginTop: i > 0 ? '14px' : 0, paddingTop: i > 0 ? '14px' : 0, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div><h3 style={{ fontSize: '12px', fontWeight: 700, color: '#111', margin: 0 }}>{e.position}</h3><p style={{ fontSize: '11px', fontWeight: 600, color: c, margin: '1px 0 0' }}>{e.company}{e.location ? ` · ${e.location}` : ''}</p></div>
+                  <span style={{ fontSize: '9px', padding: '2px 8px', background: '#f3f4f6', borderRadius: '4px', color: '#6b7280', flexShrink: 0, marginLeft: '8px' }}>{formatDateRange(e.startDate, e.endDate, e.current)}</span>
                 </div>
-              </ModernSection>
-            ) : null;
-
-          case 'projects':
-            return projects.length > 0 ? (
-              <ModernSection key={section} title="Projects" color={color}>
-                {projects.map((proj, i) => (
-                  <div key={proj.id} className={i > 0 ? 'mt-2.5 pt-2.5 border-t border-gray-100' : ''}>
-                    <div className="flex items-baseline gap-2">
-                      <h3 className="font-bold text-[12px] text-gray-900">{proj.name}</h3>
-                      {proj.url && <span className="text-[9px]" style={{ color }}>{proj.url}</span>}
-                    </div>
-                    {proj.description && <p className="text-[10.5px] text-gray-600 mt-0.5">{proj.description}</p>}
-                    {proj.technologies.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {proj.technologies.map((t, j) => (
-                          <span key={j} className="text-[9px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{t}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </ModernSection>
-            ) : null;
-
-          case 'certifications':
-            return certifications.length > 0 ? (
-              <ModernSection key={section} title="Certifications" color={color}>
-                <div className="space-y-1">
-                  {certifications.map((c) => (
-                    <div key={c.id} className="flex justify-between text-[10.5px]">
-                      <span><span className="font-semibold text-gray-800">{c.name}</span> · {c.issuer}</span>
-                      <span className="text-gray-400">{formatDate(c.date)}</span>
-                    </div>
-                  ))}
-                </div>
-              </ModernSection>
-            ) : null;
-
-          case 'languages':
-            return languages.length > 0 ? (
-              <ModernSection key={section} title="Languages" color={color}>
-                <div className="flex flex-wrap gap-2">
-                  {languages.map((l) => (
-                    <span key={l.id} className="text-[10.5px] px-2 py-0.5 rounded-md bg-gray-50 text-gray-700">
-                      {l.language} <span className="text-gray-400">— {l.proficiency}</span>
-                    </span>
-                  ))}
-                </div>
-              </ModernSection>
-            ) : null;
-
-          case 'awards':
-            return awards.length > 0 ? (
-              <ModernSection key={section} title="Awards" color={color}>
-                {awards.map((a) => (
-                  <div key={a.id} className="flex justify-between text-[10.5px]">
-                    <span className="font-semibold text-gray-800">{a.title} — {a.issuer}</span>
-                    <span className="text-gray-400">{formatDate(a.date)}</span>
-                  </div>
-                ))}
-              </ModernSection>
-            ) : null;
-
-          case 'volunteering':
-            return volunteering.length > 0 ? (
-              <ModernSection key={section} title="Volunteering" color={color}>
-                {volunteering.map((v) => (
-                  <div key={v.id} className="flex justify-between text-[10.5px]">
-                    <span className="font-semibold text-gray-800">{v.role} — {v.organization}</span>
-                    <span className="text-gray-400">{formatDateRange(v.startDate, v.endDate, v.current || false)}</span>
-                  </div>
-                ))}
-              </ModernSection>
-            ) : null;
-
-          case 'publications':
-            return publications.length > 0 ? (
-              <ModernSection key={section} title="Publications" color={color}>
-                {publications.map((p) => (
-                  <div key={p.id} className="text-[10.5px]">
-                    <span className="font-semibold text-gray-800">{p.title}</span> — {p.publisher}, {formatDate(p.date)}
-                  </div>
-                ))}
-              </ModernSection>
-            ) : null;
-
-          default:
-            return null;
-        }
-      })}
+                {e.highlights.filter(Boolean).length > 0 && <ul style={{ margin: '6px 0 0', padding: 0, listStyle: 'none' }}>{e.highlights.filter(Boolean).map((h, j) => (
+                  <li key={j} style={{ fontSize: '10.5px', color: '#374151', display: 'flex', gap: '6px', marginTop: '3px' }}><span style={{ marginTop: '5px', width: '5px', height: '5px', borderRadius: '50%', background: `${c}40`, flexShrink: 0 }} /><span>{h}</span></li>
+                ))}</ul>}
+              </div>
+            ))}</MainSec> : null;
+            case 'education': return education.length > 0 ? <MainSec key={key} title="Education" c={c}>{education.map((e) => (
+              <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div><h3 style={{ fontSize: '12px', fontWeight: 700, margin: 0 }}>{e.degree}{e.field ? ` in ${e.field}` : ''}</h3><p style={{ fontSize: '11px', color: c, margin: 0 }}>{e.institution}</p>{e.gpa && <p style={{ fontSize: '10px', color: '#9ca3af', margin: 0 }}>GPA: {e.gpa}</p>}</div>
+                <span style={{ fontSize: '9px', padding: '2px 8px', background: '#f3f4f6', borderRadius: '4px', color: '#6b7280' }}>{formatDateRange(e.startDate, e.endDate, false)}</span>
+              </div>))}</MainSec> : null;
+            case 'projects': return projects.length > 0 ? <MainSec key={key} title="Projects" c={c}>{projects.map((p, i) => (
+              <div key={p.id} style={{ marginTop: i > 0 ? '10px' : 0 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}><span style={{ fontWeight: 700, fontSize: '12px' }}>{p.name}</span>{p.url && <span style={{ fontSize: '9px', color: c }}>{p.url}</span>}</div>
+                {p.description && <p style={{ fontSize: '10.5px', color: '#6b7280', margin: '2px 0 0' }}>{p.description}</p>}
+                {p.technologies.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>{p.technologies.map((t, j) => <span key={j} style={{ fontSize: '9px', padding: '1px 6px', background: '#f3f4f6', borderRadius: '3px', color: '#6b7280' }}>{t}</span>)}</div>}
+              </div>))}</MainSec> : null;
+            case 'volunteering': return volunteering.length > 0 ? <MainSec key={key} title="Volunteering" c={c}>{volunteering.map((v) => <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px' }}><span><strong>{v.role}</strong> — {v.organization}</span><span style={{ color: '#9ca3af' }}>{formatDateRange(v.startDate, v.endDate, v.current)}</span></div>)}</MainSec> : null;
+            case 'publications': return publications.length > 0 ? <MainSec key={key} title="Publications" c={c}>{publications.map((p) => <p key={p.id} style={{ fontSize: '10.5px' }}><strong>{p.title}</strong> — {p.publisher}, {formatDate(p.date)}</p>)}</MainSec> : null;
+            default: return null;
+          }
+        })}
+      </div>
     </div>
   );
 }
 
-function ModernSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
-  return (
-    <section className="mb-4">
-      <div className="flex items-center gap-2 mb-2">
-        <div className="w-1 h-4 rounded-full" style={{ backgroundColor: color }} />
-        <h2 className="text-[13px] font-bold text-gray-900">{title}</h2>
-      </div>
-      {children}
-    </section>
-  );
+function SideBar({ title, children }: { title: string; children: React.ReactNode }) {
+  return <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '14px' }}><h3 style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '2px', opacity: 0.6, marginBottom: '8px' }}>{title}</h3>{children}</div>;
+}
+
+function MainSec({ title, c, children }: { title: string; c: string; children: React.ReactNode }) {
+  return <section style={{ marginBottom: '18px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}><div style={{ width: '4px', height: '16px', borderRadius: '2px', background: c }} /><h2 style={{ fontSize: '14px', fontWeight: 700, color: '#111', margin: 0 }}>{title}</h2></div>{children}</section>;
 }

@@ -1,189 +1,96 @@
-/* ── Elegant Template ─────────────────────────────────────── */
-/* Sophisticated, serif typography, refined. Best for: Law, Consulting, Academia */
-
+/* ── Elegant Template — Serif, Centered Dividers, Italic ── */
 'use client';
-
 import type { ResumeData, ResumeStyle } from '@/types/resume';
 import { formatDateRange, formatDate } from '@/lib/utils';
 
-interface TemplateProps {
-  data: ResumeData;
-  style: ResumeStyle;
-}
+interface P { data: ResumeData; style: ResumeStyle; }
 
-export default function ElegantTemplate({ data, style }: TemplateProps) {
-  const { personalInfo: pi, summary, experience, education, skills, projects, certifications, languages, awards, volunteering, publications } = data;
-  const color = style.primaryColor;
+export default function ElegantTemplate({ data, style }: P) {
+  const { personalInfo: pi, summary, experience, education, skills, projects, certifications, languages, awards, volunteering, publications, references } = data;
+  const c = style.primaryColor;
   const hidden = new Set(style.hiddenSections);
+  const order = style.sectionOrder.filter(s => !hidden.has(s));
+  const serif = `'Georgia', 'Playfair Display', ${style.fontFamily}, serif`;
 
   return (
-    <div className="resume-page" style={{ fontFamily: 'Georgia, serif' }}>
-      {/* Header — elegant centered with decorative borders */}
-      <header className="text-center mb-5 pb-4 border-b" style={{ borderColor: color }}>
-        <h1 className="text-[30px] font-normal tracking-wide text-gray-900" style={{ fontFamily: 'Georgia, serif' }}>
-          {pi.firstName} {pi.lastName}
-        </h1>
-        {pi.title && <p className="text-[13px] italic mt-1.5" style={{ color }}>{pi.title}</p>}
-        <div className="flex items-center justify-center flex-wrap gap-x-3 gap-y-0.5 mt-3 text-[10px] text-gray-500">
-          {[pi.email, pi.phone, pi.location, pi.linkedin, pi.github, pi.website]
-            .filter(Boolean)
-            .map((info, i, arr) => (
-              <span key={i}>
-                {info}
-                {i < arr.length - 1 && <span className="ml-3">•</span>}
-              </span>
-            ))}
+    <div style={{ width: '794px', minHeight: '1123px', padding: '52px 64px', background: '#fff', fontFamily: serif, fontSize: '11px', lineHeight: '1.65', color: '#2c2c2c' }}>
+      {/* ── HEADER — elegant, centered ── */}
+      <div style={{ textAlign: 'center', marginBottom: '6px' }}>
+        <h1 style={{ fontSize: '32px', fontWeight: 400, letterSpacing: '6px', margin: 0, textTransform: 'uppercase', color: '#222' }}>{pi.firstName} {pi.lastName}</h1>
+        {pi.title && <p style={{ fontSize: '13px', fontWeight: 400, fontStyle: 'italic', color: c, marginTop: '6px', letterSpacing: '2px' }}>{pi.title}</p>}
+        {/* Ornamental divider */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', margin: '12px 0' }}>
+          <div style={{ width: '60px', height: '1px', background: '#d4d4d4' }} />
+          <span style={{ fontSize: '14px', color: c }}>◆</span>
+          <div style={{ width: '60px', height: '1px', background: '#d4d4d4' }} />
         </div>
-      </header>
+        <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '6px', fontSize: '10px', color: '#888' }}>
+          {[pi.email, pi.phone, pi.location, pi.linkedin, pi.github, pi.website].filter(Boolean).map((info, i, arr) => (
+            <span key={i}>{info}{i < arr.length - 1 ? <span style={{ margin: '0 4px', color: '#d4d4d4' }}>|</span> : ''}</span>
+          ))}
+        </div>
+      </div>
 
-      {style.sectionOrder.filter((s) => !hidden.has(s)).map((section) => {
-        switch (section) {
-          case 'summary':
-            return summary ? (
-              <ElegantSection key={section} title="Professional Profile" color={color}>
-                <p className="text-[11px] leading-[1.65] text-gray-700 italic">{summary}</p>
-              </ElegantSection>
-            ) : null;
-
-          case 'experience':
-            return experience.length > 0 ? (
-              <ElegantSection key={section} title="Professional Experience" color={color}>
-                {experience.map((exp, i) => (
-                  <div key={exp.id} className={i > 0 ? 'mt-4' : ''}>
-                    <div className="flex justify-between items-baseline">
-                      <h3 className="text-[12px] font-bold text-gray-900">{exp.position}</h3>
-                      <span className="text-[10px] italic text-gray-500">
-                        {formatDateRange(exp.startDate, exp.endDate, exp.current)}
-                      </span>
-                    </div>
-                    <p className="text-[11px] italic" style={{ color }}>{exp.company}{exp.location ? `, ${exp.location}` : ''}</p>
-                    {exp.highlights.filter(Boolean).length > 0 && (
-                      <ul className="mt-1.5 space-y-0.5">
-                        {exp.highlights.filter(Boolean).map((h, j) => (
-                          <li key={j} className="text-[10.5px] text-gray-700 pl-4 relative">
-                            <span className="absolute left-0 top-[6px] w-1.5 h-px" style={{ backgroundColor: color }} />
-                            {h}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
-              </ElegantSection>
-            ) : null;
-
-          case 'education':
-            return education.length > 0 ? (
-              <ElegantSection key={section} title="Education" color={color}>
-                {education.map((edu) => (
-                  <div key={edu.id}>
-                    <div className="flex justify-between items-baseline">
-                      <h3 className="text-[12px] font-bold text-gray-900">{edu.degree}{edu.field ? ` in ${edu.field}` : ''}</h3>
-                      <span className="text-[10px] italic text-gray-500">{formatDateRange(edu.startDate, edu.endDate, false)}</span>
-                    </div>
-                    <p className="text-[11px] italic" style={{ color }}>{edu.institution}{edu.gpa ? ` — GPA: ${edu.gpa}` : ''}</p>
-                  </div>
-                ))}
-              </ElegantSection>
-            ) : null;
-
-          case 'skills':
-            return skills.length > 0 ? (
-              <ElegantSection key={section} title="Areas of Expertise" color={color}>
-                <div className="space-y-1">
-                  {skills.map((cat) => (
-                    <p key={cat.id} className="text-[10.5px] text-gray-700">
-                      <span className="font-bold">{cat.category}:</span>{' '}
-                      <span className="italic">{cat.items.join(', ')}</span>
-                    </p>
-                  ))}
+      {/* ── SECTIONS ── */}
+      {order.map((key) => {
+        switch (key) {
+          case 'summary': return summary ? <Sec key={key} title="Profile" c={c}><p style={{ fontSize: '11px', lineHeight: '1.85', color: '#555', textAlign: 'justify', fontStyle: 'italic' }}>{summary}</p></Sec> : null;
+          case 'experience': return experience.length > 0 ? <Sec key={key} title="Experience" c={c}>{experience.map((e, i) => (
+            <div key={e.id} style={{ marginTop: i > 0 ? '18px' : 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <div>
+                  <h3 style={{ fontSize: '13px', fontWeight: 700, margin: 0, color: '#222' }}>{e.position}</h3>
+                  <p style={{ fontSize: '11.5px', fontStyle: 'italic', color: c, margin: '1px 0 0' }}>{e.company}{e.location ? `, ${e.location}` : ''}</p>
                 </div>
-              </ElegantSection>
-            ) : null;
-
-          case 'projects':
-            return projects.length > 0 ? (
-              <ElegantSection key={section} title="Notable Projects" color={color}>
-                {projects.map((proj, i) => (
-                  <div key={proj.id} className={i > 0 ? 'mt-2' : ''}>
-                    <h3 className="font-bold text-[12px] text-gray-900">{proj.name}</h3>
-                    {proj.description && <p className="text-[10.5px] text-gray-600 italic">{proj.description}</p>}
-                    {proj.technologies.length > 0 && (
-                      <p className="text-[10px] text-gray-400 mt-0.5">{proj.technologies.join(' · ')}</p>
-                    )}
-                  </div>
-                ))}
-              </ElegantSection>
-            ) : null;
-
-          case 'certifications':
-            return certifications.length > 0 ? (
-              <ElegantSection key={section} title="Certifications" color={color}>
-                {certifications.map((c) => (
-                  <div key={c.id} className="flex justify-between text-[10.5px]">
-                    <span className="text-gray-800">{c.name} — <span className="italic">{c.issuer}</span></span>
-                    <span className="text-gray-400 italic">{formatDate(c.date)}</span>
-                  </div>
-                ))}
-              </ElegantSection>
-            ) : null;
-
-          case 'languages':
-            return languages.length > 0 ? (
-              <ElegantSection key={section} title="Languages" color={color}>
-                <p className="text-[10.5px] text-gray-700 italic">
-                  {languages.map((l) => `${l.language} (${l.proficiency})`).join(' · ')}
-                </p>
-              </ElegantSection>
-            ) : null;
-
-          case 'awards':
-            return awards.length > 0 ? (
-              <ElegantSection key={section} title="Honors & Awards" color={color}>
-                {awards.map((a) => (
-                  <div key={a.id} className="flex justify-between text-[10.5px]">
-                    <span className="text-gray-800">{a.title} — <span className="italic">{a.issuer}</span></span>
-                    <span className="text-gray-400 italic">{formatDate(a.date)}</span>
-                  </div>
-                ))}
-              </ElegantSection>
-            ) : null;
-
-          case 'volunteering':
-            return volunteering.length > 0 ? (
-              <ElegantSection key={section} title="Community Service" color={color}>
-                {volunteering.map((v) => (
-                  <div key={v.id} className="flex justify-between text-[10.5px]">
-                    <span className="text-gray-800">{v.role} — <span className="italic">{v.organization}</span></span>
-                    <span className="text-gray-400 italic">{formatDateRange(v.startDate, v.endDate, v.current || false)}</span>
-                  </div>
-                ))}
-              </ElegantSection>
-            ) : null;
-
-          case 'publications':
-            return publications.length > 0 ? (
-              <ElegantSection key={section} title="Publications" color={color}>
-                {publications.map((p) => (
-                  <p key={p.id} className="text-[10.5px] text-gray-700 italic">{p.title} — {p.publisher}, {formatDate(p.date)}</p>
-                ))}
-              </ElegantSection>
-            ) : null;
-
-          default:
-            return null;
+                <span style={{ fontSize: '10px', color: '#aaa', flexShrink: 0, fontStyle: 'italic' }}>{formatDateRange(e.startDate, e.endDate, e.current)}</span>
+              </div>
+              {e.highlights.filter(Boolean).length > 0 && <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>{e.highlights.filter(Boolean).map((h, j) => (
+                <li key={j} style={{ fontSize: '10.5px', color: '#555', marginTop: '3px', lineHeight: '1.6' }}>{h}</li>
+              ))}</ul>}
+            </div>
+          ))}</Sec> : null;
+          case 'education': return education.length > 0 ? <Sec key={key} title="Education" c={c}>{education.map(e => (
+            <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
+              <div><span style={{ fontWeight: 700, fontSize: '12px' }}>{e.degree}{e.field ? ` in ${e.field}` : ''}</span><span style={{ fontStyle: 'italic', color: '#888', marginLeft: '4px' }}>— {e.institution}</span>{e.gpa && <span style={{ color: '#aaa' }}> (GPA: {e.gpa})</span>}</div>
+              <span style={{ fontSize: '10px', color: '#aaa', fontStyle: 'italic', flexShrink: 0 }}>{formatDateRange(e.startDate, e.endDate, false)}</span>
+            </div>
+          ))}</Sec> : null;
+          case 'skills': return skills.length > 0 ? <Sec key={key} title="Expertise" c={c}>
+            {skills.map(s => <div key={s.id} style={{ marginBottom: '6px' }}>
+              <span style={{ fontWeight: 700, fontSize: '10.5px', color: '#444' }}>{s.category}: </span>
+              <span style={{ fontSize: '10.5px', color: '#666', fontStyle: 'italic' }}>{s.items.join(' · ')}</span>
+            </div>)}
+          </Sec> : null;
+          case 'projects': return projects.length > 0 ? <Sec key={key} title="Notable Projects" c={c}>{projects.map((p, i) => (
+            <div key={p.id} style={{ marginTop: i > 0 ? '10px' : 0 }}>
+              <span style={{ fontWeight: 700, fontSize: '12px' }}>{p.name}</span>
+              {p.url && <span style={{ fontSize: '9.5px', color: c, fontStyle: 'italic', marginLeft: '8px' }}>{p.url}</span>}
+              {p.description && <p style={{ fontSize: '10.5px', color: '#777', fontStyle: 'italic', margin: '2px 0 0' }}>{p.description}</p>}
+              {p.technologies.length > 0 && <p style={{ fontSize: '9.5px', color: '#999', margin: '2px 0 0' }}>{p.technologies.join(' · ')}</p>}
+            </div>
+          ))}</Sec> : null;
+          case 'certifications': return certifications.length > 0 ? <Sec key={key} title="Certifications" c={c}>{certifications.map(cert => <p key={cert.id} style={{ fontSize: '10.5px', margin: '3px 0' }}>{cert.name} — <em>{cert.issuer}, {formatDate(cert.date)}</em></p>)}</Sec> : null;
+          case 'languages': return languages.length > 0 ? <Sec key={key} title="Languages" c={c}><p style={{ fontSize: '10.5px', fontStyle: 'italic', color: '#666' }}>{languages.map(l => `${l.language} (${l.proficiency})`).join(' · ')}</p></Sec> : null;
+          case 'awards': return awards.length > 0 ? <Sec key={key} title="Distinctions" c={c}>{awards.map(a => <p key={a.id} style={{ fontSize: '10.5px', margin: '3px 0' }}>{a.title}{a.issuer ? ` — ${a.issuer}` : ''}{a.date ? `, ${formatDate(a.date)}` : ''}</p>)}</Sec> : null;
+          case 'volunteering': return volunteering.length > 0 ? <Sec key={key} title="Service" c={c}>{volunteering.map(v => <p key={v.id} style={{ fontSize: '10.5px', margin: '3px 0' }}><em>{v.role}</em> — {v.organization}, {formatDateRange(v.startDate, v.endDate, v.current)}</p>)}</Sec> : null;
+          case 'publications': return publications.length > 0 ? <Sec key={key} title="Publications" c={c}>{publications.map(p => <p key={p.id} style={{ fontSize: '10.5px', fontStyle: 'italic', margin: '3px 0' }}>{p.title} — {p.publisher}, {formatDate(p.date)}</p>)}</Sec> : null;
+          case 'references': return references.length > 0 ? <Sec key={key} title="References" c={c}>{references.map(r => <div key={r.id} style={{ marginBottom: '6px' }}><p style={{ fontSize: '11px', fontWeight: 600, margin: 0 }}>{r.name}</p><p style={{ fontSize: '10px', fontStyle: 'italic', color: '#999', margin: 0 }}>{r.position}, {r.company}</p></div>)}</Sec> : null;
+          default: return null;
         }
       })}
     </div>
   );
 }
 
-function ElegantSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function Sec({ title, c, children }: { title: string; c: string; children: React.ReactNode }) {
   return (
-    <section className="mb-5">
-      <h2 className="text-[12px] font-bold uppercase tracking-[0.2em] mb-2 text-center" style={{ color }}>
-        — {title} —
-      </h2>
+    <section style={{ marginBottom: '20px' }}>
+      {/* Centered ornamental divider */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', margin: '4px 0 12px' }}>
+        <div style={{ flex: 1, height: '1px', background: '#e5e5e5' }} />
+        <h2 style={{ fontSize: '11px', fontWeight: 400, letterSpacing: '3px', textTransform: 'uppercase', color: c, margin: 0, whiteSpace: 'nowrap' }}>— {title} —</h2>
+        <div style={{ flex: 1, height: '1px', background: '#e5e5e5' }} />
+      </div>
       {children}
     </section>
   );

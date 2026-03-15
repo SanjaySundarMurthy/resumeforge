@@ -1,227 +1,108 @@
-/* ── Creative Template ────────────────────────────────────── */
-/* Bold, playful, expressive. Best for: Design, Marketing, Media */
-
+/* ── Creative Template — Reversed Two-Column (65/35) + Timeline ── */
 'use client';
-
 import type { ResumeData, ResumeStyle } from '@/types/resume';
 import { formatDateRange, formatDate } from '@/lib/utils';
 
-interface TemplateProps {
-  data: ResumeData;
-  style: ResumeStyle;
-}
+interface P { data: ResumeData; style: ResumeStyle; }
 
-export default function CreativeTemplate({ data, style }: TemplateProps) {
-  const { personalInfo: pi, summary, experience, education, skills, projects, certifications, languages, awards, volunteering, publications } = data;
-  const color = style.primaryColor;
+export default function CreativeTemplate({ data, style }: P) {
+  const { personalInfo: pi, summary, experience, education, skills, projects, certifications, languages, awards, volunteering, publications, references } = data;
+  const c = style.primaryColor;
   const hidden = new Set(style.hiddenSections);
+  const sideKeys = new Set(['skills', 'education', 'languages', 'certifications', 'awards', 'references']);
+  const mainOrder = style.sectionOrder.filter(s => !hidden.has(s) && !sideKeys.has(s));
+  const sideOrder = style.sectionOrder.filter(s => !hidden.has(s) && sideKeys.has(s));
 
   return (
-    <div className="resume-page" style={{ fontFamily: style.fontFamily }}>
-      {/* Header — unique creative layout */}
-      <header className="mb-6 relative">
-        <div className="flex items-end gap-4">
-          {/* Large initial letter */}
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-[28px] font-bold shrink-0"
-            style={{ backgroundColor: color }}
-          >
-            {(pi.firstName?.[0] || '') + (pi.lastName?.[0] || '')}
-          </div>
-          <div className="flex-1">
-            <h1 className="text-[28px] font-bold text-gray-900 leading-tight">
-              {pi.firstName} {pi.lastName}
-            </h1>
-            {pi.title && (
-              <p className="text-[13px] font-medium mt-0.5" style={{ color }}>{pi.title}</p>
-            )}
-          </div>
+    <div style={{ width: '794px', minHeight: '1123px', background: '#fff', fontFamily: style.fontFamily, fontSize: '11px', lineHeight: '1.55', color: '#1a1a1a' }}>
+      {/* ── TOP HEADER ── */}
+      <div style={{ padding: '36px 44px 24px', borderBottom: `3px solid ${c}` }}>
+        <h1 style={{ fontSize: '28px', fontWeight: 800, margin: 0, color: '#111' }}>{pi.firstName} <span style={{ color: c }}>{pi.lastName}</span></h1>
+        {pi.title && <p style={{ fontSize: '13px', color: '#666', marginTop: '2px', fontWeight: 500 }}>{pi.title}</p>}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '8px', fontSize: '10px', color: '#888' }}>
+          {[pi.email, pi.phone, pi.location, pi.linkedin, pi.github, pi.website].filter(Boolean).map((info, i) => <span key={i}>{info}</span>)}
         </div>
-        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3 text-[10px] text-gray-500">
-          {pi.email && <span className="flex items-center gap-1">✉ {pi.email}</span>}
-          {pi.phone && <span className="flex items-center gap-1">☎ {pi.phone}</span>}
-          {pi.location && <span className="flex items-center gap-1">📍 {pi.location}</span>}
-          {pi.linkedin && <span>🔗 {pi.linkedin}</span>}
-          {pi.github && <span>⌨ {pi.github}</span>}
-          {pi.website && <span>🌐 {pi.website}</span>}
-        </div>
-        <div className="mt-3 h-1 rounded-full" style={{ background: `linear-gradient(90deg, ${color}, ${color}40, transparent)` }} />
-      </header>
+      </div>
 
-      {style.sectionOrder.filter((s) => !hidden.has(s)).map((section) => {
-        switch (section) {
-          case 'summary':
-            return summary ? (
-              <CreativeSection key={section} title="Who I Am" color={color}>
-                <p className="text-[11px] leading-[1.6] text-gray-700 italic">{summary}</p>
-              </CreativeSection>
-            ) : null;
-
-          case 'experience':
-            return experience.length > 0 ? (
-              <CreativeSection key={section} title="Where I've Worked" color={color}>
-                {experience.map((exp, i) => (
-                  <div key={exp.id} className={`relative pl-5 ${i > 0 ? 'mt-4' : ''}`}>
+      {/* ── TWO-COLUMN BODY ── */}
+      <div style={{ display: 'flex' }}>
+        {/* ── LEFT MAIN (65%) ── */}
+        <div style={{ width: '65%', padding: '24px 24px 24px 44px' }}>
+          {mainOrder.map((key) => {
+            switch (key) {
+              case 'summary': return summary ? <MainSec key={key} title="About" c={c}><p style={{ fontSize: '11px', lineHeight: '1.7', color: '#555' }}>{summary}</p></MainSec> : null;
+              case 'experience': return experience.length > 0 ? <MainSec key={key} title="Experience" c={c}><div style={{ position: 'relative', paddingLeft: '20px' }}>
+                {/* Timeline line */}
+                <div style={{ position: 'absolute', left: '5px', top: '4px', bottom: '4px', width: '2px', background: '#e5e7eb' }} />
+                {experience.map((e, i) => (
+                  <div key={e.id} style={{ position: 'relative', marginTop: i > 0 ? '16px' : 0 }}>
                     {/* Timeline dot */}
-                    <div className="absolute left-0 top-1.5 w-2.5 h-2.5 rounded-full border-2" style={{ borderColor: color, backgroundColor: i === 0 ? color : 'white' }} />
-                    {i < experience.length - 1 && (
-                      <div className="absolute left-[4px] top-4 bottom-0 w-px" style={{ backgroundColor: color + '30' }} />
-                    )}
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-bold text-[12px] text-gray-900">{exp.position}</h3>
-                        <p className="text-[11px]" style={{ color }}>{exp.company}{exp.location ? ` · ${exp.location}` : ''}</p>
-                      </div>
-                      <span className="text-[10px] text-gray-400 shrink-0 ml-3">
-                        {formatDateRange(exp.startDate, exp.endDate, exp.current)}
-                      </span>
+                    <div style={{ position: 'absolute', left: '-20px', top: '4px', width: '12px', height: '12px', borderRadius: '50%', background: '#fff', border: `3px solid ${c}` }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div><h3 style={{ fontSize: '12px', fontWeight: 700, margin: 0 }}>{e.position}</h3><p style={{ fontSize: '11px', color: c, fontWeight: 600, margin: '1px 0 0' }}>{e.company}{e.location ? ` · ${e.location}` : ''}</p></div>
+                      <span style={{ fontSize: '9px', color: '#9ca3af', flexShrink: 0 }}>{formatDateRange(e.startDate, e.endDate, e.current)}</span>
                     </div>
-                    {exp.highlights.filter(Boolean).length > 0 && (
-                      <ul className="mt-1.5 space-y-0.5">
-                        {exp.highlights.filter(Boolean).map((h, j) => (
-                          <li key={j} className="text-[10.5px] text-gray-600 pl-3 relative">
-                            <span className="absolute left-0 top-[6px] w-1 h-1 rounded-full" style={{ backgroundColor: color + '60' }} />
-                            {h}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                    {e.highlights.filter(Boolean).length > 0 && <ul style={{ margin: '4px 0 0 0', padding: 0, listStyle: 'none' }}>{e.highlights.filter(Boolean).map((h, j) => (
+                      <li key={j} style={{ fontSize: '10.5px', color: '#555', paddingLeft: '12px', position: 'relative', marginTop: '2px' }}>
+                        <span style={{ position: 'absolute', left: 0, top: '7px', width: '4px', height: '4px', background: '#d1d5db', borderRadius: '50%' }} />{h}
+                      </li>
+                    ))}</ul>}
                   </div>
                 ))}
-              </CreativeSection>
-            ) : null;
-
-          case 'education':
-            return education.length > 0 ? (
-              <CreativeSection key={section} title="Education" color={color}>
-                {education.map((edu) => (
-                  <div key={edu.id} className="flex justify-between items-baseline">
-                    <div>
-                      <h3 className="font-bold text-[12px] text-gray-900">{edu.degree}{edu.field ? ` in ${edu.field}` : ''}</h3>
-                      <p className="text-[11px]" style={{ color }}>{edu.institution}{edu.gpa ? ` · GPA: ${edu.gpa}` : ''}</p>
-                    </div>
-                    <span className="text-[10px] text-gray-400">{formatDateRange(edu.startDate, edu.endDate, false)}</span>
-                  </div>
-                ))}
-              </CreativeSection>
-            ) : null;
-
-          case 'skills':
-            return skills.length > 0 ? (
-              <CreativeSection key={section} title="My Toolkit" color={color}>
-                <div className="space-y-2">
-                  {skills.map((cat) => (
-                    <div key={cat.id}>
-                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">{cat.category}</h4>
-                      <div className="flex flex-wrap gap-1.5">
-                        {cat.items.map((item, j) => (
-                          <span
-                            key={j}
-                            className="text-[10px] px-2.5 py-1 rounded-full border"
-                            style={{ borderColor: color + '30', color: color }}
-                          >
-                            {item}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+              </div></MainSec> : null;
+              case 'projects': return projects.length > 0 ? <MainSec key={key} title="Projects" c={c}>{projects.map((p, i) => (
+                <div key={p.id} style={{ marginTop: i > 0 ? '10px' : 0, padding: '8px 10px', background: '#fafafa', borderRadius: '6px', border: '1px solid #f0f0f0' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}><span style={{ fontWeight: 700, fontSize: '11.5px' }}>{p.name}</span>{p.url && <span style={{ fontSize: '9px', color: c }}>{p.url}</span>}</div>
+                  {p.description && <p style={{ fontSize: '10px', color: '#777', margin: '2px 0 0' }}>{p.description}</p>}
+                  {p.technologies.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '5px' }}>{p.technologies.map((t, j) => <span key={j} style={{ fontSize: '8.5px', padding: '2px 6px', background: `${c}12`, color: c, borderRadius: '10px', fontWeight: 600 }}>{t}</span>)}</div>}
                 </div>
-              </CreativeSection>
-            ) : null;
+              ))}</MainSec> : null;
+              case 'volunteering': return volunteering.length > 0 ? <MainSec key={key} title="Volunteering" c={c}>{volunteering.map(v => <div key={v.id} style={{ fontSize: '10.5px', margin: '4px 0' }}><strong>{v.role}</strong> — {v.organization} ({formatDateRange(v.startDate, v.endDate, v.current)})</div>)}</MainSec> : null;
+              case 'publications': return publications.length > 0 ? <MainSec key={key} title="Publications" c={c}>{publications.map(p => <p key={p.id} style={{ fontSize: '10.5px', margin: '3px 0' }}><em>{p.title}</em> — {p.publisher}, {formatDate(p.date)}</p>)}</MainSec> : null;
+              default: return null;
+            }
+          })}
+        </div>
 
-          case 'projects':
-            return projects.length > 0 ? (
-              <CreativeSection key={section} title="Cool Projects" color={color}>
-                {projects.map((proj, i) => (
-                  <div key={proj.id} className={i > 0 ? 'mt-3' : ''}>
-                    <h3 className="font-bold text-[12px] text-gray-900">{proj.name}</h3>
-                    {proj.description && <p className="text-[10.5px] text-gray-600">{proj.description}</p>}
-                    {proj.technologies.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {proj.technologies.map((t, j) => (
-                          <span key={j} className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: color + '10', color }}>
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </CreativeSection>
-            ) : null;
-
-          case 'certifications':
-            return certifications.length > 0 ? (
-              <CreativeSection key={section} title="Certifications" color={color}>
-                {certifications.map((c) => (
-                  <div key={c.id} className="flex justify-between text-[10.5px]">
-                    <span className="font-semibold text-gray-800">{c.name} — {c.issuer}</span>
-                    <span className="text-gray-400">{formatDate(c.date)}</span>
-                  </div>
-                ))}
-              </CreativeSection>
-            ) : null;
-
-          case 'languages':
-            return languages.length > 0 ? (
-              <CreativeSection key={section} title="Languages" color={color}>
-                <div className="flex flex-wrap gap-2">
-                  {languages.map((l) => (
-                    <span key={l.id} className="text-[10.5px] px-2.5 py-1 rounded-full border" style={{ borderColor: color + '30' }}>
-                      {l.language} · {l.proficiency}
-                    </span>
-                  ))}
+        {/* ── RIGHT SIDEBAR (35%) ── */}
+        <div style={{ width: '35%', background: '#f9fafb', padding: '24px 24px 24px 20px', borderLeft: '1px solid #f0f0f0' }}>
+          {sideOrder.map((key) => {
+            switch (key) {
+              case 'skills': return skills.length > 0 ? <SideSec key={key} title="Skills" c={c}>{skills.map(s => (
+                <div key={s.id} style={{ marginBottom: '10px' }}>
+                  <p style={{ fontSize: '9px', fontWeight: 700, color: '#999', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '4px' }}>{s.category}</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>{s.items.map((item, j) => (
+                    <span key={j} style={{ fontSize: '9.5px', padding: '3px 8px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '4px', color: '#555' }}>{item}</span>
+                  ))}</div>
                 </div>
-              </CreativeSection>
-            ) : null;
-
-          case 'awards':
-            return awards.length > 0 ? (
-              <CreativeSection key={section} title="Awards" color={color}>
-                {awards.map((a) => (
-                  <div key={a.id} className="flex justify-between text-[10.5px]">
-                    <span className="font-semibold text-gray-800">🏆 {a.title} — {a.issuer}</span>
-                    <span className="text-gray-400">{formatDate(a.date)}</span>
-                  </div>
-                ))}
-              </CreativeSection>
-            ) : null;
-
-          case 'volunteering':
-            return volunteering.length > 0 ? (
-              <CreativeSection key={section} title="Giving Back" color={color}>
-                {volunteering.map((v) => (
-                  <div key={v.id} className="flex justify-between text-[10.5px]">
-                    <span className="font-semibold text-gray-800">{v.role} — {v.organization}</span>
-                    <span className="text-gray-400">{formatDateRange(v.startDate, v.endDate, v.current || false)}</span>
-                  </div>
-                ))}
-              </CreativeSection>
-            ) : null;
-
-          case 'publications':
-            return publications.length > 0 ? (
-              <CreativeSection key={section} title="Publications" color={color}>
-                {publications.map((p) => (
-                  <p key={p.id} className="text-[10.5px] text-gray-700">{p.title} — {p.publisher}, {formatDate(p.date)}</p>
-                ))}
-              </CreativeSection>
-            ) : null;
-
-          default:
-            return null;
-        }
-      })}
+              ))}</SideSec> : null;
+              case 'education': return education.length > 0 ? <SideSec key={key} title="Education" c={c}>{education.map(e => (
+                <div key={e.id} style={{ marginBottom: '8px', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #f0f0f0' }}>
+                  <p style={{ fontSize: '11px', fontWeight: 700, margin: 0 }}>{e.degree}</p>
+                  {e.field && <p style={{ fontSize: '10px', color: c, margin: 0 }}>{e.field}</p>}
+                  <p style={{ fontSize: '9.5px', color: '#888', margin: '2px 0 0' }}>{e.institution}</p>
+                  <p style={{ fontSize: '9px', color: '#aaa', margin: '1px 0 0' }}>{formatDateRange(e.startDate, e.endDate, false)}{e.gpa ? ` · GPA: ${e.gpa}` : ''}</p>
+                </div>
+              ))}</SideSec> : null;
+              case 'languages': return languages.length > 0 ? <SideSec key={key} title="Languages" c={c}>{languages.map(l => (
+                <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', margin: '3px 0' }}><span>{l.language}</span><span style={{ color: '#aaa' }}>{l.proficiency}</span></div>
+              ))}</SideSec> : null;
+              case 'certifications': return certifications.length > 0 ? <SideSec key={key} title="Certifications" c={c}>{certifications.map(cert => <div key={cert.id} style={{ marginBottom: '6px' }}><p style={{ fontSize: '10px', fontWeight: 600, margin: 0 }}>{cert.name}</p><p style={{ fontSize: '9px', color: '#999', margin: 0 }}>{cert.issuer} · {formatDate(cert.date)}</p></div>)}</SideSec> : null;
+              case 'awards': return awards.length > 0 ? <SideSec key={key} title="Awards" c={c}>{awards.map(a => <p key={a.id} style={{ fontSize: '10px', margin: '3px 0' }}>🏆 {a.title}</p>)}</SideSec> : null;
+              case 'references': return references.length > 0 ? <SideSec key={key} title="References" c={c}>{references.map(r => <div key={r.id} style={{ marginBottom: '6px' }}><p style={{ fontSize: '10px', fontWeight: 600, margin: 0 }}>{r.name}</p><p style={{ fontSize: '9px', color: '#999', margin: 0 }}>{r.position}, {r.company}</p></div>)}</SideSec> : null;
+              default: return null;
+            }
+          })}
+        </div>
+      </div>
     </div>
   );
 }
 
-function CreativeSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
-  return (
-    <section className="mb-5">
-      <h2 className="text-[14px] font-bold mb-2" style={{ color }}>{title}</h2>
-      {children}
-    </section>
-  );
+function MainSec({ title, c, children }: { title: string; c: string; children: React.ReactNode }) {
+  return <section style={{ marginBottom: '20px' }}><h2 style={{ fontSize: '13px', fontWeight: 800, color: c, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '1.5px' }}>{title}</h2>{children}</section>;
+}
+
+function SideSec({ title, c, children }: { title: string; c: string; children: React.ReactNode }) {
+  return <section style={{ marginBottom: '18px' }}><h2 style={{ fontSize: '11px', fontWeight: 800, color: c, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '1px', paddingBottom: '4px', borderBottom: `2px solid ${c}` }}>{title}</h2>{children}</section>;
 }

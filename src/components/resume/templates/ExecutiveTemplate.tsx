@@ -1,198 +1,86 @@
-/* ── Executive Template ───────────────────────────────────── */
-/* Commanding and authoritative. Best for: C-Suite, Directors, Senior Mgmt */
-
+/* ── Executive Template — Full-Width Banner + Thick Borders ── */
 'use client';
-
 import type { ResumeData, ResumeStyle } from '@/types/resume';
 import { formatDateRange, formatDate } from '@/lib/utils';
 
-interface TemplateProps {
-  data: ResumeData;
-  style: ResumeStyle;
-}
+interface P { data: ResumeData; style: ResumeStyle; }
 
-export default function ExecutiveTemplate({ data, style }: TemplateProps) {
-  const { personalInfo: pi, summary, experience, education, skills, projects, certifications, languages, awards, volunteering, publications } = data;
-  const color = style.primaryColor;
+export default function ExecutiveTemplate({ data, style }: P) {
+  const { personalInfo: pi, summary, experience, education, skills, projects, certifications, languages, awards, volunteering, publications, references } = data;
+  const c = style.primaryColor;
   const hidden = new Set(style.hiddenSections);
+  const order = style.sectionOrder.filter(s => !hidden.has(s));
 
   return (
-    <div className="resume-page" style={{ fontFamily: style.fontFamily }}>
-      {/* Header — full-width colored bar */}
-      <header className="rounded-md p-6 mb-5 -mx-3 -mt-3 text-white" style={{ backgroundColor: color }}>
-        <h1 className="text-[30px] font-bold tracking-tight">{pi.firstName} {pi.lastName}</h1>
-        {pi.title && <p className="text-[14px] mt-1 opacity-90 font-medium">{pi.title}</p>}
-        <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-3 text-[10px] opacity-80">
-          {pi.email && <span>{pi.email}</span>}
-          {pi.phone && <span>{pi.phone}</span>}
-          {pi.location && <span>{pi.location}</span>}
+    <div style={{ width: '794px', minHeight: '1123px', background: '#fff', fontFamily: style.fontFamily, fontSize: '11px', lineHeight: '1.55', color: '#1a1a1a' }}>
+      {/* ── HEADER BANNER ── */}
+      <div style={{ background: c, color: '#fff', padding: '36px 56px', position: 'relative' }}>
+        <h1 style={{ fontSize: '30px', fontWeight: 700, margin: 0, letterSpacing: '1px' }}>{pi.firstName} {pi.lastName}</h1>
+        {pi.title && <p style={{ fontSize: '14px', fontWeight: 400, opacity: 0.85, margin: '4px 0 0', letterSpacing: '1px' }}>{pi.title}</p>}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '12px', fontSize: '10px', opacity: 0.8 }}>
+          {pi.email && <span>✉ {pi.email}</span>}
+          {pi.phone && <span>☎ {pi.phone}</span>}
+          {pi.location && <span>📍 {pi.location}</span>}
           {pi.linkedin && <span>{pi.linkedin}</span>}
           {pi.github && <span>{pi.github}</span>}
           {pi.website && <span>{pi.website}</span>}
         </div>
-      </header>
+        {/* Decorative bottom strip */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '4px', background: 'rgba(0,0,0,0.15)' }} />
+      </div>
 
-      {style.sectionOrder.filter((s) => !hidden.has(s)).map((section) => {
-        switch (section) {
-          case 'summary':
-            return summary ? (
-              <ExecSection key={section} title="Executive Summary" color={color}>
-                <p className="text-[11px] leading-[1.6] text-gray-700 border-l-3 pl-3" style={{ borderColor: color + '40' }}>{summary}</p>
-              </ExecSection>
-            ) : null;
-
-          case 'experience':
-            return experience.length > 0 ? (
-              <ExecSection key={section} title="Professional Experience" color={color}>
-                {experience.map((exp, i) => (
-                  <div key={exp.id} className={i > 0 ? 'mt-4 pt-3 border-t border-gray-100' : ''}>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-[13px] font-bold text-gray-900">{exp.position}</h3>
-                        <p className="text-[11px] font-semibold" style={{ color }}>{exp.company}</p>
-                        {exp.location && <p className="text-[10px] text-gray-400">{exp.location}</p>}
-                      </div>
-                      <div className="text-right shrink-0 ml-4">
-                        <span className="text-[10px] font-semibold text-gray-600">
-                          {formatDateRange(exp.startDate, exp.endDate, exp.current)}
-                        </span>
-                      </div>
-                    </div>
-                    {exp.description && <p className="text-[10.5px] text-gray-600 mt-1">{exp.description}</p>}
-                    {exp.highlights.filter(Boolean).length > 0 && (
-                      <ul className="mt-1.5 space-y-0.5">
-                        {exp.highlights.filter(Boolean).map((h, j) => (
-                          <li key={j} className="text-[10.5px] text-gray-700 flex items-start gap-2">
-                            <span className="text-[10px] mt-[1px] shrink-0" style={{ color }}>&#9654;</span>
-                            <span>{h}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
-              </ExecSection>
-            ) : null;
-
-          case 'education':
-            return education.length > 0 ? (
-              <ExecSection key={section} title="Education" color={color}>
-                {education.map((edu) => (
-                  <div key={edu.id} className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-bold text-[12px] text-gray-900">
-                        {edu.degree}{edu.field ? ` in ${edu.field}` : ''}
-                      </h3>
-                      <p className="text-[11px]" style={{ color }}>{edu.institution}</p>
-                      {edu.gpa && <p className="text-[10px] text-gray-400">GPA: {edu.gpa}</p>}
-                    </div>
-                    <span className="text-[10px] font-semibold text-gray-600">
-                      {formatDateRange(edu.startDate, edu.endDate, false)}
-                    </span>
-                  </div>
-                ))}
-              </ExecSection>
-            ) : null;
-
-          case 'skills':
-            return skills.length > 0 ? (
-              <ExecSection key={section} title="Core Competencies" color={color}>
-                <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
-                  {skills.map((cat) => (
-                    <div key={cat.id}>
-                      <h4 className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color }}>{cat.category}</h4>
-                      <p className="text-[10.5px] text-gray-600">{cat.items.join(', ')}</p>
-                    </div>
-                  ))}
+      {/* ── BODY ── */}
+      <div style={{ padding: '32px 56px' }}>
+        {order.map((key) => {
+          switch (key) {
+            case 'summary': return summary ? <Sec key={key} title="Executive Summary" c={c}><p style={{ fontSize: '11px', lineHeight: '1.7', color: '#4b5563' }}>{summary}</p></Sec> : null;
+            case 'experience': return experience.length > 0 ? <Sec key={key} title="Professional Experience" c={c}>{experience.map((e, i) => (
+              <div key={e.id} style={{ marginTop: i > 0 ? '16px' : 0, paddingTop: i > 0 ? '16px' : 0, borderTop: i > 0 ? '1px solid #f3f4f6' : 'none' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div><h3 style={{ fontSize: '13px', fontWeight: 700, color: '#111', margin: 0 }}>{e.position}</h3><p style={{ fontSize: '11.5px', fontWeight: 600, color: c, margin: '1px 0 0' }}>{e.company}{e.location ? `, ${e.location}` : ''}</p></div>
+                  <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '12px' }}><span style={{ fontSize: '10px', background: `${c}15`, color: c, padding: '3px 10px', borderRadius: '4px', fontWeight: 600 }}>{formatDateRange(e.startDate, e.endDate, e.current)}</span></div>
                 </div>
-              </ExecSection>
-            ) : null;
-
-          case 'projects':
-            return projects.length > 0 ? (
-              <ExecSection key={section} title="Key Projects" color={color}>
-                {projects.map((proj, i) => (
-                  <div key={proj.id} className={i > 0 ? 'mt-2' : ''}>
-                    <h3 className="font-bold text-[12px] text-gray-900">{proj.name}</h3>
-                    {proj.description && <p className="text-[10.5px] text-gray-600">{proj.description}</p>}
-                    {proj.technologies.length > 0 && (
-                      <p className="text-[10px] text-gray-400 mt-0.5">{proj.technologies.join(' | ')}</p>
-                    )}
-                  </div>
-                ))}
-              </ExecSection>
-            ) : null;
-
-          case 'certifications':
-            return certifications.length > 0 ? (
-              <ExecSection key={section} title="Certifications" color={color}>
-                {certifications.map((c) => (
-                  <div key={c.id} className="flex justify-between text-[10.5px]">
-                    <span className="font-semibold text-gray-800">{c.name} — {c.issuer}</span>
-                    <span className="text-gray-400">{formatDate(c.date)}</span>
-                  </div>
-                ))}
-              </ExecSection>
-            ) : null;
-
-          case 'languages':
-            return languages.length > 0 ? (
-              <ExecSection key={section} title="Languages" color={color}>
-                <div className="flex gap-4">
-                  {languages.map((l) => (
-                    <span key={l.id} className="text-[10.5px] text-gray-700">{l.language} ({l.proficiency})</span>
-                  ))}
-                </div>
-              </ExecSection>
-            ) : null;
-
-          case 'awards':
-            return awards.length > 0 ? (
-              <ExecSection key={section} title="Awards & Recognition" color={color}>
-                {awards.map((a) => (
-                  <div key={a.id} className="flex justify-between text-[10.5px]">
-                    <span className="font-semibold text-gray-800">{a.title} — {a.issuer}</span>
-                    <span className="text-gray-400">{formatDate(a.date)}</span>
-                  </div>
-                ))}
-              </ExecSection>
-            ) : null;
-
-          case 'volunteering':
-            return volunteering.length > 0 ? (
-              <ExecSection key={section} title="Community Leadership" color={color}>
-                {volunteering.map((v) => (
-                  <div key={v.id} className="flex justify-between text-[10.5px]">
-                    <span className="font-semibold text-gray-800">{v.role} — {v.organization}</span>
-                    <span className="text-gray-400">{formatDateRange(v.startDate, v.endDate, v.current || false)}</span>
-                  </div>
-                ))}
-              </ExecSection>
-            ) : null;
-
-          case 'publications':
-            return publications.length > 0 ? (
-              <ExecSection key={section} title="Publications" color={color}>
-                {publications.map((p) => (
-                  <p key={p.id} className="text-[10.5px] text-gray-700">{p.title} — {p.publisher}, {formatDate(p.date)}</p>
-                ))}
-              </ExecSection>
-            ) : null;
-
-          default:
-            return null;
-        }
-      })}
+                {e.highlights.filter(Boolean).length > 0 && <ul style={{ margin: '8px 0 0 0', padding: 0, listStyle: 'none' }}>{e.highlights.filter(Boolean).map((h, j) => (
+                  <li key={j} style={{ fontSize: '10.5px', color: '#374151', paddingLeft: '14px', position: 'relative', marginTop: '3px' }}><span style={{ position: 'absolute', left: 0, top: '6px', width: '4px', height: '4px', background: c, borderRadius: '50%' }} />{h}</li>
+                ))}</ul>}
+              </div>
+            ))}</Sec> : null;
+            case 'education': return education.length > 0 ? <Sec key={key} title="Education" c={c}>{education.map((e) => (
+              <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                <div><h3 style={{ fontSize: '12px', fontWeight: 700, margin: 0 }}>{e.degree}{e.field ? ` in ${e.field}` : ''}</h3><p style={{ fontSize: '11px', color: '#6b7280', margin: 0 }}>{e.institution}{e.gpa ? ` · GPA: ${e.gpa}` : ''}</p></div>
+                <span style={{ fontSize: '10px', color: c, fontWeight: 600 }}>{formatDateRange(e.startDate, e.endDate, false)}</span>
+              </div>
+            ))}</Sec> : null;
+            case 'skills': return skills.length > 0 ? <Sec key={key} title="Core Competencies" c={c}><div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>{skills.map(s => (
+              <div key={s.id}><p style={{ fontSize: '10px', fontWeight: 700, color: c, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.category}</p><p style={{ fontSize: '10.5px', color: '#555' }}>{s.items.join(' · ')}</p></div>
+            ))}</div></Sec> : null;
+            case 'projects': return projects.length > 0 ? <Sec key={key} title="Key Projects" c={c}>{projects.map((p, i) => (
+              <div key={p.id} style={{ marginTop: i > 0 ? '10px' : 0 }}>
+                <span style={{ fontWeight: 700, fontSize: '12px' }}>{p.name}</span>{p.url && <span style={{ fontSize: '9.5px', color: c, marginLeft: '8px' }}>{p.url}</span>}
+                {p.description && <p style={{ fontSize: '10.5px', color: '#6b7280', margin: '2px 0 0' }}>{p.description}</p>}
+                {p.technologies.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>{p.technologies.map((t, j) => <span key={j} style={{ fontSize: '9px', padding: '2px 8px', background: `${c}10`, color: c, borderRadius: '3px', fontWeight: 500 }}>{t}</span>)}</div>}
+              </div>
+            ))}</Sec> : null;
+            case 'certifications': return certifications.length > 0 ? <Sec key={key} title="Certifications" c={c}>{certifications.map(cert => <p key={cert.id} style={{ fontSize: '10.5px', margin: '4px 0' }}><strong>{cert.name}</strong> — {cert.issuer}, {formatDate(cert.date)}</p>)}</Sec> : null;
+            case 'languages': return languages.length > 0 ? <Sec key={key} title="Languages" c={c}><div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>{languages.map(l => <span key={l.id} style={{ fontSize: '10.5px' }}><strong>{l.language}</strong> — {l.proficiency}</span>)}</div></Sec> : null;
+            case 'awards': return awards.length > 0 ? <Sec key={key} title="Honors & Awards" c={c}>{awards.map(a => <p key={a.id} style={{ fontSize: '10.5px', margin: '3px 0' }}><strong>{a.title}</strong>{a.issuer ? ` — ${a.issuer}` : ''}{a.date ? `, ${formatDate(a.date)}` : ''}</p>)}</Sec> : null;
+            case 'volunteering': return volunteering.length > 0 ? <Sec key={key} title="Community Leadership" c={c}>{volunteering.map(v => <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', margin: '3px 0' }}><span><strong>{v.role}</strong> — {v.organization}</span><span style={{ color: '#9ca3af' }}>{formatDateRange(v.startDate, v.endDate, v.current)}</span></div>)}</Sec> : null;
+            case 'publications': return publications.length > 0 ? <Sec key={key} title="Publications" c={c}>{publications.map(p => <p key={p.id} style={{ fontSize: '10.5px', margin: '3px 0' }}><em>{p.title}</em> — {p.publisher}, {formatDate(p.date)}</p>)}</Sec> : null;
+            case 'references': return references.length > 0 ? <Sec key={key} title="References" c={c}>{references.map(r => <div key={r.id} style={{ marginBottom: '6px' }}><p style={{ fontSize: '11px', fontWeight: 600 }}>{r.name}</p><p style={{ fontSize: '10px', color: '#6b7280' }}>{r.position}, {r.company}{r.email ? ` · ${r.email}` : ''}{r.phone ? ` · ${r.phone}` : ''}</p></div>)}</Sec> : null;
+            default: return null;
+          }
+        })}
+      </div>
     </div>
   );
 }
 
-function ExecSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function Sec({ title, c, children }: { title: string; c: string; children: React.ReactNode }) {
   return (
-    <section className="mb-4">
-      <h2 className="text-[12px] font-bold uppercase tracking-[0.12em] mb-2 pb-1 border-b-2" style={{ color, borderColor: color }}>
-        {title}
-      </h2>
+    <section style={{ marginBottom: '20px' }}>
+      <div style={{ borderLeft: `4px solid ${c}`, paddingLeft: '12px', marginBottom: '10px' }}>
+        <h2 style={{ fontSize: '14px', fontWeight: 700, color: '#111', margin: 0, textTransform: 'uppercase', letterSpacing: '1px' }}>{title}</h2>
+      </div>
       {children}
     </section>
   );

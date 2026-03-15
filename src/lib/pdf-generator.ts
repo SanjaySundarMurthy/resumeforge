@@ -1,109 +1,121 @@
-/* ── ResumeForge — PDF Generator ─────────────────────────── */
+/* ── PDF Generator — Pixel-perfect A4 export ─────────────── */
 
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
-export interface PDFOptions {
-  filename?: string;
-  quality?: number;
-  scale?: number;
-  margin?: number;
-}
-
 /**
- * Generate a PDF from an HTML element (the resume preview)
+ * Captures the resume preview element at its NATIVE pixel size (794×1123 = A4
+ * at 96 dpi).  We clone the element off-screen at 1:1 scale so html2canvas
+ * never has to deal with CSS transforms or mm units.
  */
-export async function generatePDF(
-  element: HTMLElement,
-  options: PDFOptions = {}
-): Promise<Blob> {
-  const {
-    quality = 2,
-    scale = 2,
-    margin = 0,
-  } = options;
+export async function generatePDF(filename = 'resume.pdf'): Promise<void> {
+  const el = document.getElementById('resume-preview');
+  if (!el) throw new Error('Resume preview element not found');
 
-  // Use html2canvas to render the element
-  const canvas = await html2canvas(element, {
-    scale,
-    useCORS: true,
-    allowTaint: true,
-    logging: false,
-    backgroundColor: '#ffffff',
-  });
+  // Clone the resume element and render it at 1:1 off-screen
+  const clone = el.cloneNode(true) as HTMLElement;
+  clone.style.transform = 'none';
+  clone.style.transformOrigin = 'top left';
+  clone.style.position = 'absolute';
+  clone.style.left = '-9999px';
+  clone.style.top = '0';
+  clone.style.width = '794px';
+  clone.style.minHeight = '1123px';
+  clone.style.background = '#fff';
+  document.body.appendChild(clone);
 
-  // Create PDF at A4 size
-  const pdf = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4',
-  });
+  try {
+    const canvas = await html2canvas(clone, {
+      scale: 2, // 2x for crisp text
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      width: 794,
+      windowWidth: 794,
+    });
 
-  const pageWidth = 210;  // A4 width in mm
-  const pageHeight = 297; // A4 height in mm
+    const imgData = canvas.toDataURL('image/png');
 
-  const contentWidth = pageWidth - margin * 2;
-  const contentHeight = pageHeight - margin * 2;
+    // A4: 210mm × 297mm
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
 
-  const imgWidth = contentWidth;
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const pdfWidth = 210;
+    const pdfHeight = 297;
 
-  const imgData = canvas.toDataURL('image/png', quality);
+    // Handle multi-page if content is taller than one A4 page
+    const canvasAspect = canvas.height / canvas.width;
+    const singlePageHeight = pdfWidth * (1123 / 794); // Expected height in mm for one A4 page
+    const contentHeight = pdfWidth * canvasAspect;
 
-  // If content fits in one page
-  if (imgHeight <= contentHeight) {
-    pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
-  } else {
-    // Multi-page: split canvas into pages
-    let remainingHeight = canvas.height;
-    let position = 0;
-    const pageCanvasHeight = (canvas.width * contentHeight) / contentWidth;
+    if (contentHeight <= pdfHeight + 2) {
+      // Content fits in one page
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, contentHeight);
+    } else {
+      // Multi-page: slice the canvas
+      const pageHeightPx = (pdfHeight / pdfWidth) * 794; // pixels per page
+      const totalPages = Math.ceil(canvas.height / (pageHeightPx * 2)); // account for scale: 2
 
-    while (remainingHeight > 0) {
-      // Create a sub-canvas for this page
-      const pageCanvas = document.createElement('canvas');
-      pageCanvas.width = canvas.width;
-      pageCanvas.height = Math.min(pageCanvasHeight, remainingHeight);
-      const ctx = pageCanvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(
-          canvas,
-          0, position,
-          canvas.width, pageCanvas.height,
-          0, 0,
-          canvas.width, pageCanvas.height
-        );
+      for (let page = 0; page < totalPages; page++) {
+        if (page > 0) pdf.addPage();
+
+        const srcY = page * pageHeightPx * 2;
+        const srcH = Math.min(pageHeightPx * 2, canvas.height - srcY);
+
+        // Create a sub-canvas for this page
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = srcH;
+        const ctx = pageCanvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+          const pageImg = pageCanvas.toDataURL('image/png');
+          const pageH = (srcH / (pageHeightPx * 2)) * pdfHeight;
+          pdf.addImage(pageImg, 'PNG', 0, 0, pdfWidth, pageH);
+        }
       }
-
-      const pageImgData = pageCanvas.toDataURL('image/png', quality);
-      const pageImgHeight = (pageCanvas.height * imgWidth) / canvas.width;
-
-      if (position > 0) pdf.addPage();
-      pdf.addImage(pageImgData, 'PNG', margin, margin, imgWidth, pageImgHeight);
-
-      remainingHeight -= pageCanvasHeight;
-      position += pageCanvasHeight;
     }
-  }
 
-  return pdf.output('blob');
+    pdf.save(filename);
+  } finally {
+    document.body.removeChild(clone);
+  }
 }
 
 /**
- * Download the resume as PDF
+ * Quick PNG export for sharing.
  */
-export async function downloadPDF(
-  element: HTMLElement,
-  filename = 'resume.pdf',
-  options: PDFOptions = {}
-): Promise<void> {
-  const blob = await generatePDF(element, options);
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+export async function generatePNG(filename = 'resume.png'): Promise<void> {
+  const el = document.getElementById('resume-preview');
+  if (!el) throw new Error('Resume preview element not found');
+
+  const clone = el.cloneNode(true) as HTMLElement;
+  clone.style.transform = 'none';
+  clone.style.position = 'absolute';
+  clone.style.left = '-9999px';
+  clone.style.top = '0';
+  clone.style.width = '794px';
+  document.body.appendChild(clone);
+
+  try {
+    const canvas = await html2canvas(clone, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      width: 794,
+      windowWidth: 794,
+    });
+
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } finally {
+    document.body.removeChild(clone);
+  }
 }

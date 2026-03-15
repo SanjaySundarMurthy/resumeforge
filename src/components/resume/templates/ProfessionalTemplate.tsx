@@ -1,219 +1,68 @@
-/* ── Professional Template ────────────────────────────────── */
-/* Classic, clean, corporate-ready. Best for: Business, Finance, Law */
-
+/* ── Professional Template — Classic Corporate Single-Column ── */
 'use client';
-
 import type { ResumeData, ResumeStyle } from '@/types/resume';
 import { formatDateRange, formatDate } from '@/lib/utils';
 
-interface TemplateProps {
-  data: ResumeData;
-  style: ResumeStyle;
-}
+interface P { data: ResumeData; style: ResumeStyle; }
 
-export default function ProfessionalTemplate({ data, style }: TemplateProps) {
-  const { personalInfo: pi, summary, experience, education, skills, projects, certifications, languages, awards, volunteering, publications } = data;
-  const color = style.primaryColor;
+export default function ProfessionalTemplate({ data, style }: P) {
+  const { personalInfo: pi, summary, experience, education, skills, projects, certifications, languages, awards, volunteering, publications, references } = data;
+  const c = style.primaryColor;
   const hidden = new Set(style.hiddenSections);
 
+  const renderSection = (key: string) => {
+    switch (key) {
+      case 'summary': return summary ? <Sec key={key} t="PROFESSIONAL SUMMARY" c={c}><p style={{ fontSize: '11px', lineHeight: '1.65', color: '#374151' }}>{summary}</p></Sec> : null;
+      case 'experience': return experience.length > 0 ? <Sec key={key} t="WORK EXPERIENCE" c={c}>{experience.map((e, i) => (
+        <div key={e.id} style={{ marginTop: i > 0 ? '14px' : 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <div><span style={{ fontWeight: 700, fontSize: '12px', color: '#111' }}>{e.position}</span>{e.company && <span style={{ fontSize: '11px', color: '#6b7280' }}>{' '}| {e.company}</span>}</div>
+            <span style={{ fontSize: '10px', color: '#9ca3af', flexShrink: 0, marginLeft: '12px' }}>{formatDateRange(e.startDate, e.endDate, e.current)}</span>
+          </div>
+          {e.location && <p style={{ fontSize: '10px', color: '#9ca3af' }}>{e.location}</p>}
+          {e.highlights.filter(Boolean).length > 0 && <ul style={{ margin: '4px 0 0', padding: 0, listStyle: 'none' }}>{e.highlights.filter(Boolean).map((h, j) => (
+            <li key={j} style={{ fontSize: '10.5px', color: '#374151', display: 'flex', gap: '6px', marginTop: '2px' }}><span style={{ marginTop: '5px', width: '4px', height: '4px', borderRadius: '50%', background: c, flexShrink: 0 }} /><span>{h}</span></li>
+          ))}</ul>}
+        </div>))}</Sec> : null;
+      case 'education': return education.length > 0 ? <Sec key={key} t="EDUCATION" c={c}>{education.map((e) => (
+        <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <div><span style={{ fontWeight: 700, fontSize: '12px' }}>{e.degree}{e.field ? ` in ${e.field}` : ''}</span><span style={{ color: '#6b7280', fontSize: '11px' }}> — {e.institution}</span>{e.gpa && <span style={{ color: '#9ca3af', fontSize: '10px', marginLeft: '6px' }}>GPA: {e.gpa}</span>}</div>
+          <span style={{ fontSize: '10px', color: '#9ca3af', flexShrink: 0 }}>{formatDateRange(e.startDate, e.endDate, false)}</span></div>
+      ))}</Sec> : null;
+      case 'skills': return skills.length > 0 ? <Sec key={key} t="TECHNICAL SKILLS" c={c}>{skills.map((s) => <div key={s.id} style={{ fontSize: '10.5px', marginTop: '3px' }}><span style={{ fontWeight: 700, color: '#1f2937' }}>{s.category}: </span><span style={{ color: '#4b5563' }}>{s.items.join(', ')}</span></div>)}</Sec> : null;
+      case 'projects': return projects.length > 0 ? <Sec key={key} t="PROJECTS" c={c}>{projects.map((p, i) => (
+        <div key={p.id} style={{ marginTop: i > 0 ? '10px' : 0 }}>
+          <span style={{ fontWeight: 700, fontSize: '12px' }}>{p.name}</span>{p.url && <span style={{ fontSize: '9px', color: '#9ca3af', marginLeft: '6px' }}>{p.url}</span>}
+          {p.description && <p style={{ fontSize: '10.5px', color: '#4b5563', margin: '2px 0 0' }}>{p.description}</p>}
+          {p.technologies.length > 0 && <p style={{ fontSize: '10px', color: '#9ca3af' }}>Tech: {p.technologies.join(', ')}</p>}
+          {p.highlights.filter(Boolean).length > 0 && <ul style={{ margin: '2px 0 0', padding: 0, listStyle: 'none' }}>{p.highlights.filter(Boolean).map((h, j) => <li key={j} style={{ fontSize: '10.5px', color: '#374151', display: 'flex', gap: '6px', marginTop: '2px' }}><span style={{ marginTop: '5px', width: '4px', height: '4px', borderRadius: '50%', background: c, flexShrink: 0 }} /><span>{h}</span></li>)}</ul>}
+        </div>))}</Sec> : null;
+      case 'certifications': return certifications.length > 0 ? <Sec key={key} t="CERTIFICATIONS" c={c}>{certifications.map((cert) => <div key={cert.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px' }}><span><strong>{cert.name}</strong> — {cert.issuer}</span><span style={{ color: '#9ca3af' }}>{formatDate(cert.date)}</span></div>)}</Sec> : null;
+      case 'languages': return languages.length > 0 ? <Sec key={key} t="LANGUAGES" c={c}><div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '10.5px' }}>{languages.map((l) => <span key={l.id}><strong>{l.language}</strong> — {l.proficiency}</span>)}</div></Sec> : null;
+      case 'awards': return awards.length > 0 ? <Sec key={key} t="AWARDS" c={c}>{awards.map((a) => <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px' }}><span><strong>{a.title}</strong> — {a.issuer}</span><span style={{ color: '#9ca3af' }}>{formatDate(a.date)}</span></div>)}</Sec> : null;
+      case 'volunteering': return volunteering.length > 0 ? <Sec key={key} t="VOLUNTEERING" c={c}>{volunteering.map((v) => <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px' }}><span><strong>{v.role}</strong> — {v.organization}</span><span style={{ color: '#9ca3af' }}>{formatDateRange(v.startDate, v.endDate, v.current)}</span></div>)}</Sec> : null;
+      case 'publications': return publications.length > 0 ? <Sec key={key} t="PUBLICATIONS" c={c}>{publications.map((p) => <p key={p.id} style={{ fontSize: '10.5px' }}><strong>{p.title}</strong> — {p.publisher}, {formatDate(p.date)}</p>)}</Sec> : null;
+      case 'references': return references.length > 0 ? <Sec key={key} t="REFERENCES" c={c}>{references.map((r) => <div key={r.id} style={{ fontSize: '10.5px' }}><strong>{r.name}</strong>, {r.position} at {r.company} — {r.email}</div>)}</Sec> : null;
+      default: return null;
+    }
+  };
+
   return (
-    <div className="resume-page" style={{ fontFamily: style.fontFamily }}>
-      {/* Header */}
-      <header className="mb-5">
-        <h1 className="text-[26px] font-bold tracking-tight" style={{ color }}>
-          {pi.firstName} {pi.lastName}
-        </h1>
-        {pi.title && (
-          <p className="text-[13px] font-medium text-gray-600 mt-0.5">{pi.title}</p>
-        )}
-        <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-2 text-[10px] text-gray-500">
-          {pi.email && <span>{pi.email}</span>}
-          {pi.phone && <span>{pi.phone}</span>}
-          {pi.location && <span>{pi.location}</span>}
-          {pi.linkedin && <span>{pi.linkedin}</span>}
-          {pi.github && <span>{pi.github}</span>}
-          {pi.website && <span>{pi.website}</span>}
+    <div style={{ width: '794px', minHeight: '1123px', padding: '48px 56px', background: '#fff', fontFamily: style.fontFamily, color: '#1a1a1a', fontSize: '11px', lineHeight: '1.5' }}>
+      <header style={{ marginBottom: '20px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: 700, color: c, margin: 0 }}>{pi.firstName} {pi.lastName}</h1>
+        {pi.title && <p style={{ fontSize: '13px', fontWeight: 500, color: '#6b7280', margin: '2px 0 0' }}>{pi.title}</p>}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', marginTop: '8px', fontSize: '10px', color: '#6b7280' }}>
+          {pi.email && <span>{pi.email}</span>}{pi.phone && <span>{pi.phone}</span>}{pi.location && <span>{pi.location}</span>}
+          {pi.linkedin && <span>{pi.linkedin}</span>}{pi.github && <span>{pi.github}</span>}{pi.website && <span>{pi.website}</span>}
         </div>
-        <div className="mt-3 h-[2px]" style={{ backgroundColor: color }} />
+        <div style={{ marginTop: '12px', height: '2px', background: c }} />
       </header>
-
-      {/* Sections rendered by order */}
-      {style.sectionOrder.filter((s) => !hidden.has(s)).map((section) => {
-        switch (section) {
-          case 'summary':
-            return summary ? (
-              <Section key={section} title="Professional Summary" color={color}>
-                <p className="text-[11px] leading-[1.55] text-gray-700">{summary}</p>
-              </Section>
-            ) : null;
-
-          case 'experience':
-            return experience.length > 0 ? (
-              <Section key={section} title="Experience" color={color}>
-                {experience.map((exp, i) => (
-                  <div key={exp.id} className={i > 0 ? 'mt-3' : ''}>
-                    <div className="flex justify-between items-baseline">
-                      <div>
-                        <span className="font-semibold text-[12px] text-gray-900">{exp.position}</span>
-                        {exp.company && <span className="text-[11px] text-gray-600"> — {exp.company}</span>}
-                      </div>
-                      <span className="text-[10px] text-gray-500 shrink-0 ml-4">
-                        {formatDateRange(exp.startDate, exp.endDate, exp.current)}
-                      </span>
-                    </div>
-                    {exp.location && <p className="text-[10px] text-gray-400">{exp.location}</p>}
-                    {exp.highlights.filter(Boolean).length > 0 && (
-                      <ul className="mt-1 space-y-0.5">
-                        {exp.highlights.filter(Boolean).map((h, j) => (
-                          <li key={j} className="text-[10.5px] text-gray-700 flex items-start gap-1.5">
-                            <span className="mt-[5px] w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                            <span>{h}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
-              </Section>
-            ) : null;
-
-          case 'education':
-            return education.length > 0 ? (
-              <Section key={section} title="Education" color={color}>
-                {education.map((edu) => (
-                  <div key={edu.id} className="flex justify-between items-baseline">
-                    <div>
-                      <span className="font-semibold text-[12px] text-gray-900">
-                        {edu.degree}{edu.field ? ` in ${edu.field}` : ''}
-                      </span>
-                      <span className="text-[11px] text-gray-600"> — {edu.institution}</span>
-                      {edu.gpa && <span className="text-[10px] text-gray-400 ml-2">GPA: {edu.gpa}</span>}
-                    </div>
-                    <span className="text-[10px] text-gray-500 shrink-0 ml-4">
-                      {formatDateRange(edu.startDate, edu.endDate, false)}
-                    </span>
-                  </div>
-                ))}
-              </Section>
-            ) : null;
-
-          case 'skills':
-            return skills.length > 0 ? (
-              <Section key={section} title="Skills" color={color}>
-                <div className="space-y-1">
-                  {skills.map((cat) => (
-                    <div key={cat.id} className="text-[10.5px]">
-                      <span className="font-semibold text-gray-800">{cat.category}: </span>
-                      <span className="text-gray-600">{cat.items.join(', ')}</span>
-                    </div>
-                  ))}
-                </div>
-              </Section>
-            ) : null;
-
-          case 'projects':
-            return projects.length > 0 ? (
-              <Section key={section} title="Projects" color={color}>
-                {projects.map((proj, i) => (
-                  <div key={proj.id} className={i > 0 ? 'mt-2' : ''}>
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-semibold text-[12px] text-gray-900">{proj.name}</span>
-                      {proj.url && <span className="text-[9px] text-gray-400">{proj.url}</span>}
-                    </div>
-                    {proj.description && <p className="text-[10.5px] text-gray-600">{proj.description}</p>}
-                    {proj.technologies.length > 0 && (
-                      <p className="text-[10px] text-gray-500 mt-0.5">
-                        <span className="font-medium">Tech:</span> {proj.technologies.join(', ')}
-                      </p>
-                    )}
-                    {proj.highlights.filter(Boolean).length > 0 && (
-                      <ul className="mt-1 space-y-0.5">
-                        {proj.highlights.filter(Boolean).map((h, j) => (
-                          <li key={j} className="text-[10.5px] text-gray-700 flex items-start gap-1.5">
-                            <span className="mt-[5px] w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                            <span>{h}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
-              </Section>
-            ) : null;
-
-          case 'certifications':
-            return certifications.length > 0 ? (
-              <Section key={section} title="Certifications" color={color}>
-                {certifications.map((c) => (
-                  <div key={c.id} className="flex justify-between text-[10.5px]">
-                    <span><span className="font-semibold text-gray-800">{c.name}</span> — {c.issuer}</span>
-                    <span className="text-gray-500">{formatDate(c.date)}</span>
-                  </div>
-                ))}
-              </Section>
-            ) : null;
-
-          case 'languages':
-            return languages.length > 0 ? (
-              <Section key={section} title="Languages" color={color}>
-                <div className="flex flex-wrap gap-x-6 gap-y-0.5 text-[10.5px]">
-                  {languages.map((l) => (
-                    <span key={l.id}><span className="font-semibold text-gray-800">{l.language}</span> — {l.proficiency}</span>
-                  ))}
-                </div>
-              </Section>
-            ) : null;
-
-          case 'awards':
-            return awards.length > 0 ? (
-              <Section key={section} title="Awards" color={color}>
-                {awards.map((a) => (
-                  <div key={a.id} className="flex justify-between text-[10.5px]">
-                    <span><span className="font-semibold text-gray-800">{a.title}</span> — {a.issuer}</span>
-                    <span className="text-gray-500">{formatDate(a.date)}</span>
-                  </div>
-                ))}
-              </Section>
-            ) : null;
-
-          case 'volunteering':
-            return volunteering.length > 0 ? (
-              <Section key={section} title="Volunteering" color={color}>
-                {volunteering.map((v) => (
-                  <div key={v.id} className="flex justify-between text-[10.5px]">
-                    <span><span className="font-semibold text-gray-800">{v.role}</span> — {v.organization}</span>
-                    <span className="text-gray-500">{formatDateRange(v.startDate, v.endDate, v.current || false)}</span>
-                  </div>
-                ))}
-              </Section>
-            ) : null;
-
-          case 'publications':
-            return publications.length > 0 ? (
-              <Section key={section} title="Publications" color={color}>
-                {publications.map((p) => (
-                  <div key={p.id} className="text-[10.5px]">
-                    <span className="font-semibold text-gray-800">{p.title}</span> — {p.publisher}, {formatDate(p.date)}
-                  </div>
-                ))}
-              </Section>
-            ) : null;
-
-          default:
-            return null;
-        }
-      })}
+      {style.sectionOrder.filter((s) => !hidden.has(s)).map(renderSection)}
     </div>
   );
 }
 
-function Section({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
-  return (
-    <section className="mb-4">
-      <h2 className="text-[13px] font-bold uppercase tracking-wider mb-1.5 pb-0.5 border-b" style={{ color, borderColor: color + '30' }}>
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
+function Sec({ t, c, children }: { t: string; c: string; children: React.ReactNode }) {
+  return <section style={{ marginBottom: '16px' }}><h2 style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '1.5px', color: c, borderBottom: `1px solid ${c}30`, paddingBottom: '3px', marginBottom: '8px', margin: '0 0 8px' }}>{t}</h2>{children}</section>;
 }
