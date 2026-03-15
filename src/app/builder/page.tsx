@@ -1,4 +1,4 @@
-/* ── ResumeForge — Builder Page v2 ─────────────────────────── */
+/* ── ResumeForge — Builder Page v3 ─────────────────────────── */
 'use client';
 
 import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
@@ -22,10 +22,11 @@ import {
   User, FileText, Briefcase, GraduationCap, Code2, FolderKanban,
   Award, Languages, Star, Heart, BookOpen, Users, Palette, BarChart3,
   ChevronDown, ZoomIn, ZoomOut, RotateCcw, History, FileType,
-  Trash2, RotateCw, Clock, Plus, Check, X, FileUp,
+  Trash2, RotateCw, Clock, Plus, Check, X, FileUp, Eraser,
+  AlertTriangle,
 } from 'lucide-react';
 
-/* ── Section Icon Map ──────────────────────────────────────── */
+/* ── Section Icons ────────────────────────────────────────── */
 const SECTION_ICONS: Record<string, React.ReactNode> = {
   personalInfo: <User className="w-4 h-4" />,
   summary: <FileText className="w-4 h-4" />,
@@ -60,54 +61,58 @@ type Tab = 'content' | 'design' | 'ats' | 'history';
 
 /* ─────────────────────────────────────────────────────────── */
 export default function BuilderPage() {
+  const store = useResumeStore();
   const {
     data, style, activeSection, editorTab, previewScale,
     setActiveSection, setEditorTab, setPreviewScale,
     loadSampleData, exportData, importData, importResumeData,
     saveVersion, restoreVersion, deleteVersion, versions,
-    getCompletenessScore,
-  } = useResumeStore();
+    getCompletenessScore, resetData,
+  } = store;
 
   const resumeRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState('');
+  const [importSuccess, setImportSuccess] = useState('');
   const [showImportZone, setShowImportZone] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [versionName, setVersionName] = useState('');
   const [savingVersion, setSavingVersion] = useState(false);
   const [notification, setNotification] = useState('');
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const completeness = useMemo(() => getCompletenessScore(), [data]);
 
   const notify = (msg: string) => {
     setNotification(msg);
-    setTimeout(() => setNotification(''), 2500);
+    setTimeout(() => setNotification(''), 3000);
   };
 
-  /* ── Zoom ─────────────────────────────────────────────── */
+  /* ── Zoom ── */
   const zoomIn = useCallback(() => setPreviewScale(Math.min(previewScale + 0.1, 1.5)), [previewScale, setPreviewScale]);
   const zoomOut = useCallback(() => setPreviewScale(Math.max(previewScale - 0.1, 0.3)), [previewScale, setPreviewScale]);
   const zoomReset = useCallback(() => setPreviewScale(0.55), [setPreviewScale]);
 
-  /* ── Export handlers ──────────────────────────────────── */
+  /* ── Filename helper ── */
   const getFilename = useCallback(() =>
     `${data.personalInfo.firstName || 'resume'}_${data.personalInfo.lastName || 'export'}`.replace(/\s+/g, '_'),
     [data.personalInfo]);
 
+  /* ── Export handlers ── */
   const handlePDF = useCallback(async () => {
     setExporting(true);
-    try { await generatePDF(`${getFilename()}.pdf`); }
+    try { await generatePDF(`${getFilename()}.pdf`); notify('PDF downloaded!'); }
     catch (e) { console.error(e); }
-    finally { setExporting(false); setShowExportMenu(false); notify('PDF downloaded!'); }
+    finally { setExporting(false); setShowExportMenu(false); }
   }, [getFilename]);
 
   const handlePNG = useCallback(async () => {
     setExporting(true);
-    try { await generatePNG(`${getFilename()}.png`); }
+    try { await generatePNG(`${getFilename()}.png`); notify('PNG downloaded!'); }
     catch (e) { console.error(e); }
-    finally { setExporting(false); setShowExportMenu(false); notify('PNG downloaded!'); }
+    finally { setExporting(false); setShowExportMenu(false); }
   }, [getFilename]);
 
   const handleExportJSON = useCallback(() => {
@@ -125,27 +130,46 @@ export default function BuilderPage() {
     finally { setExporting(false); setShowExportMenu(false); }
   }, [data, style, getFilename]);
 
-  /* ── Import handler ───────────────────────────────────── */
+  /* ── Import handler (PDF/DOCX/TXT/JSON) ── */
   const handleImportFile = useCallback(async (file: File) => {
     if (!file) return;
-    setImporting(true); setImportError('');
+    setImporting(true); setImportError(''); setImportSuccess('');
     try {
       if (file.name.endsWith('.json')) {
         const text = await file.text();
         importData(text);
-        notify('JSON imported successfully!');
+        setImportSuccess('JSON imported successfully! All fields have been populated.');
+        notify('JSON imported!');
       } else {
         const result = await parseResumeFile(file);
         if (result.success && result.data) {
+          // importResumeData now does full reset -> overlay
           importResumeData(result.data);
+
+          // Build success message with details
+          const pi = result.data.personalInfo;
+          const expCount = result.data.experience?.length || 0;
+          const eduCount = result.data.education?.length || 0;
+          const skillCount = result.data.skills?.length || 0;
+          const parts: string[] = [];
+          if (pi?.firstName || pi?.lastName) parts.push(`Name: ${pi.firstName || ''} ${pi.lastName || ''}`);
+          if (pi?.email) parts.push(`Email: ${pi.email}`);
+          if (expCount > 0) parts.push(`${expCount} experience${expCount > 1 ? 's' : ''}`);
+          if (eduCount > 0) parts.push(`${eduCount} education`);
+          if (skillCount > 0) parts.push(`${skillCount} skill categor${skillCount > 1 ? 'ies' : 'y'}`);
+
+          const detail = parts.length > 0
+            ? `Extracted: ${parts.join(' · ')}`
+            : 'File parsed but limited data was extracted. You can edit all sections manually.';
+
+          setImportSuccess(detail);
           notify(`Resume parsed from ${file.name.split('.').pop()?.toUpperCase()}!`);
         } else {
-          setImportError(result.error || 'Could not parse file. Try a simpler format.');
+          setImportError(result.error || 'Could not parse file. Try PDF, DOCX, or TXT format.');
         }
       }
-      setShowImportZone(false);
     } catch (e: any) {
-      setImportError(e.message || 'Import failed');
+      setImportError(e.message || 'Import failed. Please try a different file.');
     } finally { setImporting(false); }
   }, [importData, importResumeData]);
 
@@ -166,11 +190,17 @@ export default function BuilderPage() {
     input.click();
   }, [handleImportFile]);
 
-  /* ── Version handlers ─────────────────────────────────── */
+  /* ── Clear / Reset ── */
+  const handleClearAll = useCallback(() => {
+    resetData();
+    setShowClearConfirm(false);
+    notify('All data cleared — start fresh!');
+  }, [resetData]);
+
+  /* ── Version handlers ── */
   const handleSaveVersion = useCallback(() => {
     saveVersion(versionName || undefined);
-    setVersionName('');
-    setSavingVersion(false);
+    setVersionName(''); setSavingVersion(false);
     notify('Version saved!');
   }, [saveVersion, versionName]);
 
@@ -179,7 +209,7 @@ export default function BuilderPage() {
     notify('Version restored!');
   }, [restoreVersion]);
 
-  /* ── Close export on outside click ───────────────────── */
+  /* ── Close export on outside click ── */
   useEffect(() => {
     if (!showExportMenu) return;
     const h = () => setShowExportMenu(false);
@@ -195,66 +225,123 @@ export default function BuilderPage() {
   ];
 
   const EditorComponent = SECTION_EDITORS[activeSection] || PersonalInfoEditor;
-
   const completenessColor = completeness >= 80 ? '#10b981' : completeness >= 60 ? '#3b82f6' : '#f59e0b';
 
   return (
     <div className="h-screen flex flex-col bg-gray-100">
 
-      {/* ── Toast notification ─────────────────────────── */}
+      {/* ── Toast ── */}
       {notification && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-gray-900 text-white text-sm px-5 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 animate-fade-in">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-gray-900 text-white text-sm px-5 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 animate-slide-up">
           <Check className="w-4 h-4 text-green-400" /> {notification}
         </div>
       )}
 
-      {/* ── Import Modal ───────────────────────────────── */}
-      {showImportZone && (
+      {/* ── Clear Confirmation Dialog ── */}
+      {showClearConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-bold text-gray-900">Import Resume</h2>
-              <button onClick={() => { setShowImportZone(false); setImportError(''); }} className="text-gray-400 hover:text-gray-700">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div
-              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={handleDropZone}
-              onClick={openFilePicker}
-              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
-                dragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-              }`}
-            >
-              {importing ? (
-                <div className="flex flex-col items-center gap-3">
-                  <RotateCw className="w-8 h-8 text-blue-500 animate-spin" />
-                  <p className="text-sm text-gray-600">Parsing your resume…</p>
-                </div>
-              ) : (
-                <>
-                  <FileUp className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                  <p className="text-sm font-semibold text-gray-700">Drop file here, or click to browse</p>
-                  <p className="text-xs text-gray-400 mt-2">Supports PDF, DOCX, DOC, TXT, JSON</p>
-                </>
-              )}
-            </div>
-            {importError && (
-              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                {importError}
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 animate-bounce-in">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
               </div>
-            )}
-            <div className="mt-5 grid grid-cols-5 gap-2 text-center">
-              {['PDF', 'DOCX', 'DOC', 'TXT', 'JSON'].map((fmt) => (
-                <div key={fmt} className="py-1.5 rounded-lg bg-gray-100 text-xs font-semibold text-gray-600">{fmt}</div>
-              ))}
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Clear all data?</h3>
+                <p className="text-xs text-gray-500 mt-0.5">This will remove all resume content, style settings, and version history. This cannot be undone.</p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setShowClearConfirm(false)} className="btn-ghost flex-1 text-xs">Cancel</button>
+              <button onClick={handleClearAll} className="btn-danger flex-1 text-xs gap-1.5"><Trash2 className="w-3.5 h-3.5" /> Clear Everything</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── TOP BAR ──────────────────────────────────── */}
+      {/* ── Import Modal ── */}
+      {showImportZone && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg mx-4 animate-bounce-in">
+            <div className="flex justify-between items-center mb-5">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Import Resume</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Upload a resume file to populate all fields automatically</p>
+              </div>
+              <button onClick={() => { setShowImportZone(false); setImportError(''); setImportSuccess(''); }} className="text-gray-400 hover:text-gray-700 p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDropZone}
+              onClick={openFilePicker}
+              className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all ${
+                dragging
+                  ? 'border-blue-500 bg-blue-50 scale-[1.02]'
+                  : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/30'
+              }`}
+            >
+              {importing ? (
+                <div className="flex flex-col items-center gap-3">
+                  <RotateCw className="w-10 h-10 text-blue-500 animate-spin" />
+                  <p className="text-sm font-medium text-gray-600">Parsing your resume...</p>
+                  <p className="text-xs text-gray-400">Extracting personal info, experience, education, skills...</p>
+                </div>
+              ) : (
+                <>
+                  <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <FileUp className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <p className="text-sm font-bold text-gray-700">Drop your resume here, or click to browse</p>
+                  <p className="text-xs text-gray-400 mt-2">We'll extract all your resume content automatically</p>
+                </>
+              )}
+            </div>
+
+            {/* Format badges */}
+            <div className="mt-4 flex items-center justify-center gap-2">
+              {['PDF', 'DOCX', 'TXT', 'JSON'].map((fmt) => (
+                <span key={fmt} className="px-3 py-1.5 rounded-lg bg-gray-100 text-[10px] font-bold text-gray-600">{fmt}</span>
+              ))}
+            </div>
+
+            {/* Errors */}
+            {importError && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <div>{importError}</div>
+              </div>
+            )}
+
+            {/* Success with details */}
+            {importSuccess && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700 flex items-start gap-2">
+                <Check className="w-4 h-4 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold mb-1">Import successful!</p>
+                  <p className="text-xs text-green-600">{importSuccess}</p>
+                  <p className="text-xs text-green-500 mt-1">You can now edit all sections in the Content tab.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Instructions */}
+            <div className="mt-4 p-3 bg-gray-50 rounded-xl">
+              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">How import works</p>
+              <ul className="text-[11px] text-gray-500 space-y-1">
+                <li>• <strong>PDF/DOCX/TXT</strong>: We extract text and use smart parsing to detect sections</li>
+                <li>• <strong>JSON</strong>: Directly loads previously exported ResumeForge data</li>
+                <li>• All imported data is <strong>fully editable</strong> across all sections</li>
+                <li>• Previous data is <strong>cleared</strong> when you import a new file</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── TOP BAR ── */}
       <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 shrink-0 z-20">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
@@ -264,28 +351,37 @@ export default function BuilderPage() {
           <div className="h-5 w-px bg-gray-200" />
           <h1 className="text-sm font-bold text-gray-900">ResumeForge</h1>
 
-          {/* Completeness bar */}
+          {/* Completeness indicator */}
           <div className="hidden md:flex items-center gap-2 ml-2">
-            <div className="w-28 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+            <div className="w-32 h-2 rounded-full bg-gray-100 overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-700"
                 style={{ width: `${completeness}%`, backgroundColor: completenessColor }}
               />
             </div>
-            <span className="text-xs font-semibold tabular-nums" style={{ color: completenessColor }}>
+            <span className="text-xs font-bold tabular-nums" style={{ color: completenessColor }}>
               {completeness}%
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {/* Zoom */}
-          <div className="hidden md:flex items-center gap-1 mr-2">
+          <div className="hidden md:flex items-center gap-0.5 mr-1.5">
             <button onClick={zoomOut} className="btn-ghost p-1.5"><ZoomOut className="w-4 h-4" /></button>
-            <span className="text-xs text-gray-500 w-10 text-center">{Math.round(previewScale * 100)}%</span>
+            <span className="text-xs text-gray-500 w-10 text-center tabular-nums">{Math.round(previewScale * 100)}%</span>
             <button onClick={zoomIn} className="btn-ghost p-1.5"><ZoomIn className="w-4 h-4" /></button>
             <button onClick={zoomReset} className="btn-ghost p-1.5"><RotateCcw className="w-3.5 h-3.5" /></button>
           </div>
+
+          {/* Clear button */}
+          <button
+            onClick={() => setShowClearConfirm(true)}
+            className="btn-ghost text-xs gap-1 text-red-500 hover:text-red-600 hover:bg-red-50"
+            title="Clear all data"
+          >
+            <Eraser className="w-3.5 h-3.5" /> Clear
+          </button>
 
           <button onClick={loadSampleData} className="btn-ghost text-xs gap-1.5">
             <Sparkles className="w-3.5 h-3.5" /> Sample
@@ -303,7 +399,7 @@ export default function BuilderPage() {
               className="btn-primary text-xs gap-1.5"
             >
               <Download className="w-3.5 h-3.5" />
-              {exporting ? 'Exporting…' : 'Export'}
+              {exporting ? 'Exporting...' : 'Export'}
               <ChevronDown className="w-3 h-3" />
             </button>
             {showExportMenu && (
@@ -322,7 +418,7 @@ export default function BuilderPage() {
                 </button>
                 <div className="border-t border-gray-100 my-1" />
                 <button onClick={handleExportJSON} className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
-                  <FileJson className="w-4 h-4 text-green-500" /> Export JSON (backup)
+                  <FileJson className="w-4 h-4 text-green-500" /> Export JSON
                 </button>
               </div>
             )}
@@ -330,12 +426,12 @@ export default function BuilderPage() {
         </div>
       </header>
 
-      {/* ── MAIN CONTENT ─────────────────────────────── */}
+      {/* ── MAIN ── */}
       <div className="flex-1 flex overflow-hidden">
 
-        {/* ─── LEFT PANEL ─── */}
+        {/* ── LEFT PANEL ── */}
         <div className="w-[420px] bg-white border-r border-gray-200 flex flex-col shrink-0">
-          {/* Tab Bar */}
+          {/* Tab bar */}
           <div className="flex border-b border-gray-200 shrink-0">
             {([
               { key: 'content' as Tab, label: 'Content', icon: <FileText className="w-3.5 h-3.5" /> },
@@ -361,10 +457,10 @@ export default function BuilderPage() {
             ))}
           </div>
 
-          {/* Panel Content */}
+          {/* Panel content */}
           <div className="flex-1 overflow-y-auto scrollbar-thin">
 
-            {/* ── CONTENT TAB ── */}
+            {/* CONTENT TAB */}
             {editorTab === 'content' && (
               <div className="flex h-full">
                 <div className="w-12 sm:w-14 bg-gray-50 border-r border-gray-100 shrink-0 py-2 flex flex-col gap-0.5">
@@ -393,28 +489,23 @@ export default function BuilderPage() {
               </div>
             )}
 
-            {/* ── DESIGN TAB ── */}
+            {/* DESIGN TAB */}
             {editorTab === 'design' && (
-              <div className="p-4 animate-fade-in">
-                <DesignPanel />
-              </div>
+              <div className="p-4 animate-fade-in"><DesignPanel /></div>
             )}
 
-            {/* ── ATS TAB ── */}
+            {/* ATS TAB */}
             {editorTab === 'ats' && (
-              <div className="p-4 animate-fade-in">
-                <ATSScorePanel />
-              </div>
+              <div className="p-4 animate-fade-in"><ATSScorePanel /></div>
             )}
 
-            {/* ── HISTORY TAB ── */}
+            {/* HISTORY TAB */}
             {editorTab === 'history' && (
               <div className="p-4 animate-fade-in space-y-4">
                 <div>
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Version History</h3>
-                  <p className="text-[10px] text-gray-400 mb-4">Save snapshots to quickly compare or revert to previous versions.</p>
+                  <p className="text-[10px] text-gray-400 mb-4">Save snapshots to compare or revert.</p>
 
-                  {/* Save new version */}
                   {savingVersion ? (
                     <div className="flex items-center gap-2 mb-4">
                       <input
@@ -438,16 +529,16 @@ export default function BuilderPage() {
                     </button>
                   )}
 
-                  {/* Version list */}
                   {versions.length === 0 ? (
                     <div className="text-center py-8">
                       <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                       <p className="text-xs text-gray-400">No saved versions yet.</p>
+                      <p className="text-[10px] text-gray-300 mt-1">Save a version before making changes.</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
                       {[...versions].reverse().map((v) => (
-                        <div key={v.id} className="flex items-center gap-2 p-3 rounded-xl border border-gray-100 bg-gray-50 hover:border-gray-200 transition-all group">
+                        <div key={v.id} className="flex items-center gap-2 p-3 rounded-xl border border-gray-100 bg-gray-50 hover:border-gray-200 hover:shadow-sm transition-all group">
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-semibold text-gray-800 truncate">{v.name}</p>
                             <p className="text-[10px] text-gray-400">
@@ -458,18 +549,10 @@ export default function BuilderPage() {
                             )}
                           </div>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => handleRestoreVersion(v.id)}
-                              title="Restore"
-                              className="p-1.5 rounded-lg hover:bg-blue-100 text-blue-600"
-                            >
+                            <button onClick={() => handleRestoreVersion(v.id)} title="Restore" className="p-1.5 rounded-lg hover:bg-blue-100 text-blue-600">
                               <RotateCw className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              onClick={() => deleteVersion(v.id)}
-                              title="Delete"
-                              className="p-1.5 rounded-lg hover:bg-red-100 text-red-500"
-                            >
+                            <button onClick={() => deleteVersion(v.id)} title="Delete" className="p-1.5 rounded-lg hover:bg-red-100 text-red-500">
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
@@ -480,11 +563,10 @@ export default function BuilderPage() {
                 </div>
               </div>
             )}
-
           </div>
         </div>
 
-        {/* ─── RIGHT PANEL: Preview ─── */}
+        {/* ── RIGHT PANEL: Preview ── */}
         <div className="flex-1 overflow-auto bg-gray-100 p-6 flex justify-center">
           <div className="animate-fade-in">
             <ResumePreview

@@ -195,7 +195,7 @@ export default function ATSScorePanel() {
                 <div
                   className="h-full rounded-full"
                   style={{
-                    width: `${Math.min(keywordAnalysis.density * 10, 100)}%`,
+                    width: `${Math.min(keywordAnalysis.density * 100, 100)}%`,
                     backgroundColor: '#8b5cf6',
                   }}
                 />
@@ -233,7 +233,7 @@ export default function ATSScorePanel() {
         <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Score Breakdown</h3>
         <div className="space-y-2.5">
           {atsResult.breakdown.map((item) => {
-            const pct = Math.round(item.score);
+            const pct = item.maxScore > 0 ? Math.round((item.score / item.maxScore) * 100) : 0;
             const barColor = pct >= 80 ? '#10b981' : pct >= 60 ? '#3b82f6' : pct >= 40 ? '#f59e0b' : '#ef4444';
             const icon = pct >= 80 ? '✓' : pct >= 60 ? '~' : '✗';
             return (

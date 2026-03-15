@@ -135,6 +135,7 @@ interface ResumeState {
   importData: (json: string) => void;
   importResumeData: (data: Partial<ResumeData>) => void;
   loadSampleData: () => void;
+  resetData: () => void;
 
   // Actions — Job Description
   setJobDescription: (jd: Partial<JobDescription>) => void;
@@ -712,8 +713,36 @@ export const useResumeStore = create<ResumeState>()(
       loadSampleData: () =>
         set({ data: SAMPLE_DATA, isDirty: true }),
 
-      importResumeData: (partialData) =>
-        set((s) => ({ data: { ...s.data, ...partialData }, isDirty: true })),
+      resetData: () =>
+        set({
+          data: JSON.parse(JSON.stringify(defaultData)),
+          style: JSON.parse(JSON.stringify(defaultStyle)),
+          jobDescription: { title: '', company: '', text: '' },
+          versions: [],
+          isDirty: false,
+        }),
+
+      importResumeData: (partialData) => {
+        // Deep merge: start from blank defaults, then overlay parsed data
+        const base = JSON.parse(JSON.stringify(defaultData)) as ResumeData;
+        const merged: ResumeData = {
+          ...base,
+          personalInfo: { ...base.personalInfo, ...(partialData.personalInfo || {}) },
+          summary: partialData.summary ?? base.summary,
+          experience: partialData.experience && partialData.experience.length > 0 ? partialData.experience : base.experience,
+          education: partialData.education && partialData.education.length > 0 ? partialData.education : base.education,
+          skills: partialData.skills && partialData.skills.length > 0 ? partialData.skills : base.skills,
+          projects: partialData.projects && partialData.projects.length > 0 ? partialData.projects : base.projects,
+          certifications: partialData.certifications && partialData.certifications.length > 0 ? partialData.certifications : base.certifications,
+          languages: partialData.languages && partialData.languages.length > 0 ? partialData.languages : base.languages,
+          awards: partialData.awards && partialData.awards.length > 0 ? partialData.awards : base.awards,
+          volunteering: partialData.volunteering && partialData.volunteering.length > 0 ? partialData.volunteering : base.volunteering,
+          publications: partialData.publications && partialData.publications.length > 0 ? partialData.publications : base.publications,
+          references: partialData.references && partialData.references.length > 0 ? partialData.references : base.references,
+          customSections: partialData.customSections && partialData.customSections.length > 0 ? partialData.customSections : base.customSections,
+        };
+        set({ data: merged, isDirty: true });
+      },
 
       setJobDescription: (jd) =>
         set((s) => ({ jobDescription: { ...s.jobDescription, ...jd } })),
