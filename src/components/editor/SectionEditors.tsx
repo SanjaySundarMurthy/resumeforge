@@ -11,18 +11,23 @@ import {
 
 /* ── Shared Components ───────────────────────────────────── */
 
-function Input({ label, value, onChange, placeholder, type = 'text' }: {
-  label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string;
+function Input({ label, value, onChange, placeholder, type = 'text', pattern, title: inputTitle }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string; pattern?: string; title?: string;
 }) {
+  const id = `input-${label.toLowerCase().replace(/\s+/g, '-')}`;
   return (
     <div>
-      <label className="input-label">{label}</label>
+      <label htmlFor={id} className="input-label">{label}</label>
       <input
+        id={id}
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        pattern={pattern}
+        title={inputTitle}
         className="input-field"
+        aria-label={label}
       />
     </div>
   );
@@ -31,15 +36,18 @@ function Input({ label, value, onChange, placeholder, type = 'text' }: {
 function TextArea({ label, value, onChange, placeholder, rows = 3 }: {
   label: string; value: string; onChange: (v: string) => void; placeholder?: string; rows?: number;
 }) {
+  const id = `textarea-${label.toLowerCase().replace(/\s+/g, '-')}`;
   return (
     <div>
-      <label className="input-label">{label}</label>
+      <label htmlFor={id} className="input-label">{label}</label>
       <textarea
+        id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
         className="textarea-field"
+        aria-label={label}
       />
     </div>
   );
@@ -51,6 +59,9 @@ function Toggle({ label, checked, onChange }: {
   return (
     <button
       type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
       onClick={() => onChange(!checked)}
       className="flex items-center gap-2 cursor-pointer bg-transparent border-none p-0"
     >
@@ -76,16 +87,17 @@ function ArrayEditor({ items, onChange, placeholder }: {
   const add = () => onChange([...items, '']);
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5" role="list" aria-label="Bullet points">
       {items.map((item, i) => (
-        <div key={i} className="flex gap-1.5">
+        <div key={`bullet-${i}-${items.length}`} className="flex gap-1.5" role="listitem">
           <input
             value={item}
             onChange={(e) => update(i, e.target.value)}
             placeholder={placeholder || `Item ${i + 1}`}
             className="input-field flex-1"
+            aria-label={`Bullet point ${i + 1}`}
           />
-          <button onClick={() => remove(i)} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
+          <button onClick={() => remove(i)} className="p-2 text-gray-400 hover:text-red-500 transition-colors" aria-label={`Remove bullet ${i + 1}`}>
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -140,7 +152,7 @@ export function PersonalInfoEditor() {
       <Input label="Professional Title" value={pi.title} onChange={(v) => updatePersonalInfo({ title: v })} placeholder="Senior Software Engineer" />
       <div className="grid grid-cols-2 gap-3">
         <Input label="Email" value={pi.email} onChange={(v) => updatePersonalInfo({ email: v })} placeholder="john@email.com" type="email" />
-        <Input label="Phone" value={pi.phone} onChange={(v) => updatePersonalInfo({ phone: v })} placeholder="+1 (555) 123-4567" />
+        <Input label="Phone" value={pi.phone} onChange={(v) => updatePersonalInfo({ phone: v })} placeholder="+1 (555) 123-4567" type="tel" />
       </div>
       <Input label="Location" value={pi.location} onChange={(v) => updatePersonalInfo({ location: v })} placeholder="San Francisco, CA" />
       <Input label="LinkedIn" value={pi.linkedin} onChange={(v) => updatePersonalInfo({ linkedin: v })} placeholder="linkedin.com/in/johndoe" />
@@ -191,8 +203,8 @@ export function ExperienceEditor() {
           </div>
           <Input label="Location" value={exp.location} onChange={(v) => updateExperience(exp.id, { location: v })} placeholder="San Francisco, CA" />
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Start Date" value={exp.startDate} onChange={(v) => updateExperience(exp.id, { startDate: v })} placeholder="2020-01" />
-            <Input label="End Date" value={exp.endDate} onChange={(v) => updateExperience(exp.id, { endDate: v })} placeholder="2023-06" />
+            <Input label="Start Date" value={exp.startDate} onChange={(v) => updateExperience(exp.id, { startDate: v })} placeholder="2020-01" type="month" />
+            <Input label="End Date" value={exp.endDate} onChange={(v) => updateExperience(exp.id, { endDate: v })} placeholder="2023-06" type="month" />
           </div>
           <Toggle label="I currently work here" checked={exp.current} onChange={(v) => updateExperience(exp.id, { current: v })} />
           <div>
@@ -232,8 +244,8 @@ export function EducationEditor() {
             <Input label="Field of Study" value={edu.field} onChange={(v) => updateEducation(edu.id, { field: v })} placeholder="Computer Science" />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Start Date" value={edu.startDate} onChange={(v) => updateEducation(edu.id, { startDate: v })} placeholder="2016-08" />
-            <Input label="End Date" value={edu.endDate} onChange={(v) => updateEducation(edu.id, { endDate: v })} placeholder="2020-05" />
+            <Input label="Start Date" value={edu.startDate} onChange={(v) => updateEducation(edu.id, { startDate: v })} placeholder="2016-08" type="month" />
+            <Input label="End Date" value={edu.endDate} onChange={(v) => updateEducation(edu.id, { endDate: v })} placeholder="2020-05" type="month" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Input label="GPA" value={edu.gpa} onChange={(v) => updateEducation(edu.id, { gpa: v })} placeholder="3.8" />
@@ -349,7 +361,7 @@ export function CertificationsEditor() {
           <Input label="Certification Name" value={cert.name} onChange={(v) => updateCertification(cert.id, { name: v })} placeholder="AWS Solutions Architect" />
           <div className="grid grid-cols-2 gap-3">
             <Input label="Issuer" value={cert.issuer} onChange={(v) => updateCertification(cert.id, { issuer: v })} placeholder="Amazon Web Services" />
-            <Input label="Date" value={cert.date} onChange={(v) => updateCertification(cert.id, { date: v })} placeholder="2023-06" />
+            <Input label="Date" value={cert.date} onChange={(v) => updateCertification(cert.id, { date: v })} placeholder="2023-06" type="month" />
           </div>
           <Input label="URL" value={cert.url} onChange={(v) => updateCertification(cert.id, { url: v })} placeholder="credential URL" />
         </SectionCard>
@@ -418,7 +430,7 @@ export function AwardsEditor() {
           <Input label="Title" value={award.title} onChange={(v) => updateAward(award.id, { title: v })} placeholder="Employee of the Year" />
           <div className="grid grid-cols-2 gap-3">
             <Input label="Issuer" value={award.issuer} onChange={(v) => updateAward(award.id, { issuer: v })} placeholder="Company Name" />
-            <Input label="Date" value={award.date} onChange={(v) => updateAward(award.id, { date: v })} placeholder="2023-01" />
+            <Input label="Date" value={award.date} onChange={(v) => updateAward(award.id, { date: v })} placeholder="2023-01" type="month" />
           </div>
           <TextArea label="Description" value={award.description} onChange={(v) => updateAward(award.id, { description: v })} placeholder="Brief description..." rows={2} />
         </SectionCard>
@@ -447,8 +459,8 @@ export function VolunteeringEditor() {
           <Input label="Organization" value={vol.organization} onChange={(v) => updateVolunteering(vol.id, { organization: v })} placeholder="Red Cross" />
           <Input label="Role" value={vol.role} onChange={(v) => updateVolunteering(vol.id, { role: v })} placeholder="Volunteer Coordinator" />
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Start Date" value={vol.startDate} onChange={(v) => updateVolunteering(vol.id, { startDate: v })} placeholder="2022-01" />
-            <Input label="End Date" value={vol.endDate} onChange={(v) => updateVolunteering(vol.id, { endDate: v })} placeholder="2023-06" />
+            <Input label="Start Date" value={vol.startDate} onChange={(v) => updateVolunteering(vol.id, { startDate: v })} placeholder="2022-01" type="month" />
+            <Input label="End Date" value={vol.endDate} onChange={(v) => updateVolunteering(vol.id, { endDate: v })} placeholder="2023-06" type="month" />
           </div>
           <TextArea label="Description" value={vol.description} onChange={(v) => updateVolunteering(vol.id, { description: v })} placeholder="What you did..." rows={2} />
         </SectionCard>
@@ -477,7 +489,7 @@ export function PublicationsEditor() {
           <Input label="Title" value={pub.title} onChange={(v) => updatePublication(pub.id, { title: v })} placeholder="Paper title" />
           <div className="grid grid-cols-2 gap-3">
             <Input label="Publisher" value={pub.publisher} onChange={(v) => updatePublication(pub.id, { publisher: v })} placeholder="Journal/Conference" />
-            <Input label="Date" value={pub.date} onChange={(v) => updatePublication(pub.id, { date: v })} placeholder="2023-06" />
+            <Input label="Date" value={pub.date} onChange={(v) => updatePublication(pub.id, { date: v })} placeholder="2023-06" type="month" />
           </div>
           <Input label="URL" value={pub.url} onChange={(v) => updatePublication(pub.id, { url: v })} placeholder="doi.org/..." />
         </SectionCard>

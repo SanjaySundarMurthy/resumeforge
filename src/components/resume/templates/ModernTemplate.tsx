@@ -14,7 +14,7 @@ export default function ModernTemplate({ data, style }: P) {
   const sideOrder = style.sectionOrder.filter(s => !hidden.has(s) && sidebarSections.has(s));
   const BASE_FONT = style.fontSize === 'small' ? 10 : style.fontSize === 'large' ? 12.5 : 11;
   const fs = (r: number) => `${(BASE_FONT * r).toFixed(1)}px`;
-  const sp = style.sectionSpacing ?? 18;
+  const sp = style.sectionSpacing ?? 16;
   const psp = style.paragraphSpacing ?? 4;
 
   return (
@@ -61,7 +61,7 @@ export default function ModernTemplate({ data, style }: P) {
       </div>
 
       {/* ── MAIN CONTENT ── */}
-      <div style={{ flex: 1, padding: `40px ${style.marginLeft ?? 36}px` }}>
+      <div style={{ flex: 1, padding: `40px ${style.marginRight ?? 36}px 40px 36px` }}>
         {mainOrder.map((key) => {
           switch (key) {
             case 'summary': return summary ? <MainSec key={key} title="About Me" c={c} sp={sp} bf={BASE_FONT}><p style={{ fontSize: fs(1.0), lineHeight: '1.65', color: '#4b5563' }}>{summary}</p></MainSec> : null;
@@ -101,6 +101,6 @@ function SideBar({ title, bf = 11, children }: { title: string; bf?: number; chi
   return <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '14px' }}><h3 style={{ fontSize: `${(bf * 0.82).toFixed(1)}px`, fontWeight: 700, letterSpacing: '2px', opacity: 0.6, marginBottom: '8px' }}>{title}</h3>{children}</div>;
 }
 
-function MainSec({ title, c, sp = 18, bf = 11, children }: { title: string; c: string; sp?: number; bf?: number; children: React.ReactNode }) {
-  return <section style={{ marginBottom: `${sp}px` }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}><div style={{ width: '4px', height: '16px', borderRadius: '2px', background: c }} /><h2 style={{ fontSize: `${(bf * 1.27).toFixed(1)}px`, fontWeight: 700, color: '#111', margin: 0 }}>{title}</h2></div>{children}</section>;
+function MainSec({ title, c, sp = 16, bf = 11, children }: { title: string; c: string; sp?: number; bf?: number; children: React.ReactNode }) {
+  return <section style={{ marginBottom: `${sp}px` }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: `${Math.min(sp, 12)}px` }}><div style={{ width: '4px', height: '16px', borderRadius: '2px', background: c }} /><h2 style={{ fontSize: `${(bf * 1.27).toFixed(1)}px`, fontWeight: 700, color: '#111', margin: 0 }}>{title}</h2></div>{children}</section>;
 }

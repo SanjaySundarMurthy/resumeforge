@@ -705,8 +705,10 @@ export const useResumeStore = create<ResumeState>()(
           if (parsed.style) {
             set({ style: { ...defaultStyle, ...parsed.style } });
           }
-        } catch {
-          console.error('Invalid JSON import');
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          console.error('Invalid JSON import:', message);
+          throw new Error(`Failed to import resume: ${message}`);
         }
       },
 

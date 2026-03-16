@@ -2,7 +2,7 @@
   "name": "resumeforge",
   "version": "1.0.0",
   "private": true,
-  "description": "ResumeForge — AI-powered resume builder with ATS optimization, 8+ professional templates, real-time preview, and instant PDF export",
+  "description": "ResumeForge — free open-source resume builder with ATS optimization, 8 professional templates, real-time preview, and multi-format export",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

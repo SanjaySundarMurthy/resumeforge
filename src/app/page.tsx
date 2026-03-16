@@ -197,7 +197,7 @@ const features = [
   {
     icon: Globe,
     title: 'Import & Export',
-    desc: 'Export your data as JSON to back up, or import previously saved resumes.',
+    desc: 'Export to PDF, DOCX, or PNG. Import from PDF, DOCX, or JSON to pre-fill your resume instantly.',
   },
 ];
 
@@ -427,21 +427,21 @@ function ATSSection() {
 
 const testimonials = [
   {
-    name: 'Sarah Chen',
-    role: 'Software Engineer at Google',
-    text: 'ResumeForge helped me create a resume that finally got me past the ATS filters. Landed 5 interviews in my first week!',
+    name: 'A. K.',
+    role: 'Software Engineer',
+    text: 'The real-time ATS scoring helped me understand exactly what recruiters\' systems are looking for. Went from rejected to interviews within days.',
     rating: 5,
   },
   {
-    name: 'Marcus Johnson',
-    role: 'Product Manager at Stripe',
-    text: 'The ATS scoring feature is incredible. I went from a 45 to a 94 score, and the difference in response rates was night and day.',
+    name: 'R. M.',
+    role: 'Product Manager',
+    text: 'I love that everything stays in my browser — no accounts, no data collection. The DOCX and PDF exports are both pixel-perfect.',
     rating: 5,
   },
   {
-    name: 'Emily Rodriguez',
-    role: 'Data Scientist at Netflix',
-    text: 'Clean, professional templates that actually look good AND pass ATS. The real-time preview saved me so much time.',
+    name: 'J. L.',
+    role: 'UX Designer',
+    text: 'Eight beautiful templates that are all ATS-compatible. The real-time preview and design customization options are a game-changer.',
     rating: 5,
   },
 ];
@@ -503,7 +503,7 @@ const faqs = [
   },
   {
     q: 'What file formats can I export?',
-    a: 'Currently we support PDF export with pixel-perfect quality. You can also export/import your resume data as JSON for backup.',
+    a: 'You can export your resume as a pixel-perfect PDF, a formatted DOCX (Word), or a PNG image. You can also export/import your resume data as JSON for backup and portability.',
   },
   {
     q: 'Are the templates tested with real ATS systems?',

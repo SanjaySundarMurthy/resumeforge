@@ -12,13 +12,13 @@ export default function BoldTemplate({ data, style }: P) {
   const order = style.sectionOrder.filter(s => !hidden.has(s));
   const BASE_FONT = style.fontSize === 'small' ? 10 : style.fontSize === 'large' ? 12.5 : 11;
   const fs = (r: number) => `${(BASE_FONT * r).toFixed(1)}px`;
-  const sp = style.sectionSpacing ?? 22;
+  const sp = style.sectionSpacing ?? 16;
   const psp = style.paragraphSpacing ?? 4;
 
   return (
     <div style={{ width: '794px', minHeight: '1123px', background: '#fff', fontFamily: style.fontFamily, fontSize: `${BASE_FONT}px`, lineHeight: style.lineHeight ?? 1.55, color: '#1a1a1a' }}>
       {/* ── HEADER — Bold split name ── */}
-      <div style={{ padding: '40px 48px 28px', borderBottom: `6px solid ${c}` }}>
+      <div style={{ padding: `40px ${style.marginRight ?? 48}px 28px ${style.marginLeft ?? 48}px`, borderBottom: `6px solid ${c}` }}>
         <h1 style={{ fontSize: fs(3.82), fontWeight: 900, margin: 0, lineHeight: 1 }}>
           <span style={{ color: '#111' }}>{pi.firstName}</span>{' '}
           <span style={{ color: c }}>{pi.lastName}</span>
@@ -32,7 +32,7 @@ export default function BoldTemplate({ data, style }: P) {
       </div>
 
       {/* ── BODY ── */}
-      <div style={{ padding: `24px ${style.marginLeft ?? 48}px` }}>
+      <div style={{ padding: `24px ${style.marginRight ?? 48}px 24px ${style.marginLeft ?? 48}px` }}>
         {order.map((key) => {
           switch (key) {
             case 'summary': return summary ? <Sec key={key} title="ABOUT ME" c={c} sp={sp} bf={BASE_FONT}><p style={{ fontSize: fs(1.05), lineHeight: '1.75', color: '#555', borderLeft: `4px solid ${c}20`, paddingLeft: '14px' }}>{summary}</p></Sec> : null;
@@ -105,10 +105,10 @@ export default function BoldTemplate({ data, style }: P) {
   );
 }
 
-function Sec({ title, c, sp = 22, bf = 11, children }: { title: string; c: string; sp?: number; bf?: number; children: React.ReactNode }) {
+function Sec({ title, c, sp = 16, bf = 11, children }: { title: string; c: string; sp?: number; bf?: number; children: React.ReactNode }) {
   return (
     <section style={{ marginBottom: `${sp}px` }}>
-      <div style={{ marginBottom: '10px' }}>
+      <div style={{ marginBottom: `${Math.min(sp, 12)}px` }}>
         <h2 style={{ fontSize: `${(bf * 1.27).toFixed(1)}px`, fontWeight: 900, letterSpacing: '2px', color: '#111', margin: 0, display: 'inline-block' }}>{title}</h2>
         <div style={{ height: '4px', background: c, marginTop: '4px', borderRadius: '2px' }} />
       </div>

@@ -12,13 +12,13 @@ export default function ExecutiveTemplate({ data, style }: P) {
   const order = style.sectionOrder.filter(s => !hidden.has(s));
   const BASE_FONT = style.fontSize === 'small' ? 10 : style.fontSize === 'large' ? 12.5 : 11;
   const fs = (r: number) => `${(BASE_FONT * r).toFixed(1)}px`;
-  const sp = style.sectionSpacing ?? 20;
+  const sp = style.sectionSpacing ?? 16;
   const psp = style.paragraphSpacing ?? 4;
 
   return (
     <div style={{ width: '794px', minHeight: '1123px', background: '#fff', fontFamily: style.fontFamily, fontSize: `${BASE_FONT}px`, lineHeight: style.lineHeight ?? 1.55, color: '#1a1a1a' }}>
       {/* ── HEADER BANNER ── */}
-      <div style={{ background: c, color: '#fff', padding: '36px 56px', position: 'relative' }}>
+      <div style={{ background: c, color: '#fff', padding: `36px ${style.marginRight ?? 56}px 36px ${style.marginLeft ?? 56}px`, position: 'relative' }}>
         <h1 style={{ fontSize: fs(2.73), fontWeight: 700, margin: 0, letterSpacing: '1px' }}>{pi.firstName} {pi.lastName}</h1>
         {pi.title && <p style={{ fontSize: fs(1.27), fontWeight: 400, opacity: 0.85, margin: '4px 0 0', letterSpacing: '1px' }}>{pi.title}</p>}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '12px', fontSize: fs(0.91), opacity: 0.8 }}>
@@ -34,7 +34,7 @@ export default function ExecutiveTemplate({ data, style }: P) {
       </div>
 
       {/* ── BODY ── */}
-      <div style={{ padding: `32px ${style.marginLeft ?? 56}px` }}>
+      <div style={{ padding: `32px ${style.marginRight ?? 56}px 32px ${style.marginLeft ?? 56}px` }}>
         {order.map((key) => {
           switch (key) {
             case 'summary': return summary ? <Sec key={key} title="Executive Summary" c={c} sp={sp} bf={BASE_FONT}><p style={{ fontSize: fs(1.0), lineHeight: '1.7', color: '#4b5563' }}>{summary}</p></Sec> : null;
@@ -79,10 +79,10 @@ export default function ExecutiveTemplate({ data, style }: P) {
   );
 }
 
-function Sec({ title, c, sp = 20, bf = 11, children }: { title: string; c: string; sp?: number; bf?: number; children: React.ReactNode }) {
+function Sec({ title, c, sp = 16, bf = 11, children }: { title: string; c: string; sp?: number; bf?: number; children: React.ReactNode }) {
   return (
     <section style={{ marginBottom: `${sp}px` }}>
-      <div style={{ borderLeft: `4px solid ${c}`, paddingLeft: '12px', marginBottom: '10px' }}>
+      <div style={{ borderLeft: `4px solid ${c}`, paddingLeft: '12px', marginBottom: `${Math.min(sp, 12)}px` }}>
         <h2 style={{ fontSize: `${(bf * 1.27).toFixed(1)}px`, fontWeight: 700, color: '#111', margin: 0, textTransform: 'uppercase', letterSpacing: '1px' }}>{title}</h2>
       </div>
       {children}

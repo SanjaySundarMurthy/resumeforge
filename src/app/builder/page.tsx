@@ -6,6 +6,7 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { useResumeStore } from '@/store/useResumeStore';
 import { generatePDF, generatePNG } from '@/lib/pdf-generator';
 import { parseResumeFile } from '@/lib/resume-parser';
@@ -25,8 +26,9 @@ import {
   ChevronDown, ZoomIn, ZoomOut, RotateCcw, History, FileType,
   Trash2, RotateCw, Clock, Plus, Check, X, FileUp, Eraser,
   AlertTriangle, Keyboard, GripVertical, Undo2, Redo2,
-  Eye, Loader2, PanelLeftClose, PanelLeft,
+  Eye, Loader2, PanelLeftClose, PanelLeft, Moon, Sun,
 } from 'lucide-react';
+import { useDarkMode } from '@/hooks/useDarkMode';
 
 /* ── Lazy-loaded heavy panels ────────────────────────────── */
 const DesignPanel = dynamic(() => import('@/components/editor/DesignPanel'), {
@@ -134,6 +136,7 @@ export default function BuilderPage() {
   } = store;
 
   const resumeRef = useRef<HTMLDivElement>(null);
+  const { isDark, toggle: toggleDarkMode } = useDarkMode();
   const [exporting, setExporting] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -411,25 +414,31 @@ export default function BuilderPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-100">
+    <ErrorBoundary fallbackMessage="The resume builder encountered an error. Your data is safe.">
+      <div className="h-screen flex flex-col bg-gray-100">
+
+      {/* ── Skip Navigation ── */}
+      <a href="#resume-editor" className="sr-only focus:not-sr-only focus:absolute focus:z-[200] focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-medium">
+        Skip to editor
+      </a>
 
       {/* ── Toast ── */}
       {notification && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-gray-900 text-white text-sm px-5 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 animate-toast-slide">
+        <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-gray-900 text-white text-sm px-5 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 animate-toast-slide">
           <Check className="w-4 h-4 text-green-400" /> {notification}
         </div>
       )}
 
       {/* ── Clear Confirmation ── */}
       {showClearConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="clear-title">
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 animate-bounce-in">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-5 h-5 text-red-600" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-gray-900">Clear all data?</h3>
+                <h3 id="clear-title" className="text-sm font-bold text-gray-900">Clear all data?</h3>
                 <p className="text-xs text-gray-500 mt-0.5">This cannot be undone.</p>
               </div>
             </div>
@@ -443,12 +452,12 @@ export default function BuilderPage() {
 
       {/* ── Keyboard Shortcuts Modal ── */}
       {showShortcuts && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowShortcuts(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title" onClick={() => setShowShortcuts(false)}>
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4 animate-bounce-in" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Keyboard className="w-5 h-5 text-blue-600" />
-                <h3 className="text-sm font-bold text-gray-900">Keyboard Shortcuts</h3>
+                <h3 id="shortcuts-title" className="text-sm font-bold text-gray-900">Keyboard Shortcuts</h3>
               </div>
               <button onClick={() => setShowShortcuts(false)} className="text-gray-400 hover:text-gray-700"><X className="w-4 h-4" /></button>
             </div>
@@ -479,11 +488,11 @@ export default function BuilderPage() {
 
       {/* ── Import Modal ── */}
       {showImportZone && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="import-title">
           <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-full max-w-lg mx-4 animate-bounce-in">
             <div className="flex justify-between items-center mb-5">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Import Resume</h2>
+                <h2 id="import-title" className="text-lg font-bold text-gray-900">Import Resume</h2>
                 <p className="text-xs text-gray-400 mt-0.5">Upload a file to populate all fields</p>
               </div>
               <button onClick={() => { setShowImportZone(false); setImportError(''); setImportSuccess(''); }} className="text-gray-400 hover:text-gray-700 p-1">
@@ -550,7 +559,7 @@ export default function BuilderPage() {
       )}
 
       {/* ── TOP BAR ── */}
-      <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-3 sm:px-4 shrink-0 z-20">
+      <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-3 sm:px-4 shrink-0 z-20" role="banner">
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Mobile panel toggle */}
           <button onClick={() => setShowMobilePanel(!showMobilePanel)} className="md:hidden btn-ghost p-1.5">
@@ -611,6 +620,10 @@ export default function BuilderPage() {
             <Upload className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Import</span>
           </button>
 
+          <button onClick={toggleDarkMode} className="btn-ghost p-1.5" title={isDark ? 'Switch to light mode' : 'Switch to dark mode'} aria-label="Toggle dark mode">
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+
           <button onClick={() => setShowShortcuts(true)} className="btn-ghost p-1.5 hidden lg:flex" title="Keyboard shortcuts (Ctrl+/)">
             <Keyboard className="w-4 h-4" />
           </button>
@@ -649,12 +662,12 @@ export default function BuilderPage() {
       </header>
 
       {/* ── MAIN ── */}
-      <div className="flex-1 flex overflow-hidden">
+      <main id="resume-editor" className="flex-1 flex overflow-hidden">
 
         {/* ── LEFT PANEL (responsive) ── */}
-        <div className={`${showMobilePanel ? 'flex' : 'hidden'} md:flex ${mobileView === 'preview' ? 'hidden md:flex' : ''} w-full md:w-[420px] bg-white border-r border-gray-200 flex-col shrink-0`}>
+        <div className={`${showMobilePanel ? 'flex' : 'hidden'} md:flex ${mobileView === 'preview' ? 'hidden md:flex' : ''} w-full md:w-[420px] bg-white border-r border-gray-200 flex-col shrink-0`} role="region" aria-label="Resume editor">
           {/* Tab bar */}
-          <div className="flex border-b border-gray-200 shrink-0">
+          <nav className="flex border-b border-gray-200 shrink-0" role="tablist" aria-label="Editor tabs">
             {([
               { key: 'content' as Tab, label: 'Content', icon: <FileText className="w-3.5 h-3.5" /> },
               { key: 'design' as Tab, label: 'Design', icon: <Palette className="w-3.5 h-3.5" /> },
@@ -664,6 +677,9 @@ export default function BuilderPage() {
               <button
                 key={tab.key}
                 onClick={() => setEditorTab(tab.key)}
+                role="tab"
+                aria-selected={editorTab === tab.key}
+                aria-controls={`tabpanel-${tab.key}`}
                 className={`flex-1 flex items-center justify-center gap-1 py-3 text-[11px] font-medium transition-all ${editorTab === tab.key ? 'tab-active' : 'tab-inactive'}`}
               >
                 {tab.icon}
@@ -673,7 +689,7 @@ export default function BuilderPage() {
                 )}
               </button>
             ))}
-          </div>
+          </nav>
 
           {/* Panel content */}
           <div className="flex-1 overflow-y-auto scrollbar-thin">
@@ -792,12 +808,13 @@ export default function BuilderPage() {
         </div>
 
         {/* ── RIGHT PANEL: Preview ── */}
-        <div className={`flex-1 overflow-auto bg-gray-100 p-4 sm:p-6 flex justify-center ${mobileView === 'editor' ? 'hidden md:flex' : 'flex'}`}>
+        <div className={`flex-1 overflow-auto bg-gray-100 p-4 sm:p-6 flex justify-center ${mobileView === 'editor' ? 'hidden md:flex' : 'flex'}`} role="region" aria-label="Resume preview">
           <div className="animate-fade-in">
             <ResumePreview ref={resumeRef} data={data} style={style} scale={previewScale} />
           </div>
         </div>
+      </main>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }

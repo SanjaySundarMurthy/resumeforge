@@ -1,7 +1,7 @@
 /* ── Template Mini Preview — Live Resume Data Thumbnails ──── */
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, memo } from 'react';
 import type { TemplateId, ResumeData, ResumeStyle } from '@/types/resume';
 import { useResumeStore } from '@/store/useResumeStore';
 
@@ -14,8 +14,8 @@ interface Props {
   desc: string;
 }
 
-export default function TemplateMiniPreview({ templateId, primaryColor, isActive, onClick, name, desc }: Props) {
-  const { data } = useResumeStore();
+function TemplateMiniPreviewInner({ templateId, primaryColor, isActive, onClick, name, desc }: Props) {
+  const data = useResumeStore((s) => s.data);
   const c = primaryColor;
   const [hovered, setHovered] = useState(false);
 
@@ -78,6 +78,9 @@ export default function TemplateMiniPreview({ templateId, primaryColor, isActive
     </button>
   );
 }
+
+const TemplateMiniPreview = memo(TemplateMiniPreviewInner);
+export default TemplateMiniPreview;
 
 /* ── Live SVG Previews with actual data ─────────────────── */
 interface LiveProps {

@@ -68,5 +68,5 @@ export default function ProfessionalTemplate({ data, style }: P) {
 }
 
 function Sec({ t, c, sp = 16, bf = 11, children }: { t: string; c: string; sp?: number; bf?: number; children: React.ReactNode }) {
-  return <section style={{ marginBottom: `${sp}px` }}><h2 style={{ fontSize: `${(bf * 1.09).toFixed(1)}px`, fontWeight: 700, letterSpacing: '1.5px', color: c, borderBottom: `1px solid ${c}30`, paddingBottom: '3px', marginBottom: '8px', margin: '0 0 8px' }}>{t}</h2>{children}</section>;
+  return <section style={{ marginBottom: `${sp}px` }}><h2 style={{ fontSize: `${(bf * 1.09).toFixed(1)}px`, fontWeight: 700, letterSpacing: '1.5px', color: c, borderBottom: `1px solid ${c}30`, paddingBottom: '3px', margin: `0 0 ${Math.min(sp, 10)}px` }}>{t}</h2>{children}</section>;
 }

@@ -3,7 +3,7 @@
  * using the `docx` library. ATS-optimized structure.
  * ─────────────────────────────────────────────────────────── */
 
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, convertInchesToTwip, ShadingType, UnderlineType, TabStopPosition, TabStopType } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, convertInchesToTwip } from 'docx';
 import { saveAs } from 'file-saver';
 import type { ResumeData, ResumeStyle } from '@/types/resume';
 import { formatDateRange, formatDate } from '@/lib/utils';

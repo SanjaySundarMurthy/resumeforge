@@ -11,7 +11,7 @@ export default function MinimalTemplate({ data, style }: P) {
   const order = style.sectionOrder.filter(s => !hidden.has(s));
   const BASE_FONT = style.fontSize === 'small' ? 10 : style.fontSize === 'large' ? 12.5 : 11;
   const fs = (r: number) => `${(BASE_FONT * r).toFixed(1)}px`;
-  const sp = style.sectionSpacing ?? 18;
+  const sp = style.sectionSpacing ?? 16;
   const psp = style.paragraphSpacing ?? 4;
 
   return (
@@ -72,10 +72,10 @@ export default function MinimalTemplate({ data, style }: P) {
   );
 }
 
-function Sec({ title, sp = 18, bf = 11, children }: { title: string; sp?: number; bf?: number; children: React.ReactNode }) {
+function Sec({ title, sp = 16, bf = 11, children }: { title: string; sp?: number; bf?: number; children: React.ReactNode }) {
   return (
     <section style={{ marginBottom: `${sp}px` }}>
-      <div style={{ textAlign: 'center', margin: '0 0 10px' }}>
+      <div style={{ textAlign: 'center', margin: `0 0 ${Math.min(sp, 12)}px` }}>
         <span style={{ fontSize: `${(bf * 0.91).toFixed(1)}px`, fontWeight: 500, letterSpacing: '3px', textTransform: 'uppercase', color: '#999' }}>— {title} —</span>
       </div>
       {children}

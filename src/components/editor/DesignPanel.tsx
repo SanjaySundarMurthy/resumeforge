@@ -437,6 +437,9 @@ function ToggleField({
       </div>
       <button
         type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={title}
         onClick={() => onChange(!checked)}
         className={`relative rounded-full transition-colors shrink-0 ${
           checked ? 'bg-blue-500' : 'bg-gray-200'

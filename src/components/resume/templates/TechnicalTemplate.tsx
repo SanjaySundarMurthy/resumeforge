@@ -14,13 +14,13 @@ export default function TechnicalTemplate({ data, style }: P) {
   const mono = `'Consolas', 'Fira Code', ${style.fontFamily}, monospace`;
   const BASE_FONT = style.fontSize === 'small' ? 10 : style.fontSize === 'large' ? 12.5 : 11;
   const fs = (r: number) => `${(BASE_FONT * r).toFixed(1)}px`;
-  const sp = style.sectionSpacing ?? 18;
+  const sp = style.sectionSpacing ?? 16;
   const psp = style.paragraphSpacing ?? 4;
 
   return (
     <div style={{ width: '794px', minHeight: '1123px', background: '#fff', fontFamily: style.fontFamily, fontSize: `${BASE_FONT}px`, lineHeight: style.lineHeight ?? 1.55, color: '#1f2937' }}>
       {/* ── HEADER — Dark terminal-style ── */}
-      <div style={{ background: '#1e1e2e', color: '#cdd6f4', padding: '32px 48px', position: 'relative' }}>
+      <div style={{ background: '#1e1e2e', color: '#cdd6f4', padding: `32px ${style.marginRight ?? 48}px 32px ${style.marginLeft ?? 48}px`, position: 'relative' }}>
         {/* Fake terminal dots */}
         <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
           <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f38ba8' }} />
@@ -45,7 +45,7 @@ export default function TechnicalTemplate({ data, style }: P) {
       </div>
 
       {/* ── BODY ── */}
-      <div style={{ padding: `28px ${style.marginLeft ?? 48}px` }}>
+      <div style={{ padding: `28px ${style.marginRight ?? 48}px 28px ${style.marginLeft ?? 48}px` }}>
         {order.map((key) => {
           switch (key) {
             case 'summary': return summary ? <Sec key={key} title="about" c={c} mono={mono} sp={sp} bf={BASE_FONT}><p style={{ fontSize: fs(1.0), lineHeight: '1.7', color: '#6b7280', fontStyle: 'italic' }}>{summary}</p></Sec> : null;
@@ -98,10 +98,10 @@ export default function TechnicalTemplate({ data, style }: P) {
   );
 }
 
-function Sec({ title, c, mono, sp = 18, bf = 11, children }: { title: string; c: string; mono: string; sp?: number; bf?: number; children: React.ReactNode }) {
+function Sec({ title, c, mono, sp = 16, bf = 11, children }: { title: string; c: string; mono: string; sp?: number; bf?: number; children: React.ReactNode }) {
   return (
     <section style={{ marginBottom: `${sp}px` }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: `${Math.min(sp, 10)}px` }}>
         <span style={{ fontFamily: mono, fontSize: `${(bf * 1.0).toFixed(1)}px`, color: '#9ca3af' }}>//</span>
         <h2 style={{ fontFamily: mono, fontSize: `${(bf * 1.09).toFixed(1)}px`, fontWeight: 600, color: c, margin: 0, letterSpacing: '0.5px' }}>{title}</h2>
         <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />

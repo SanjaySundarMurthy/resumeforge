@@ -31,8 +31,8 @@ export async function parseResumeFile(file: File): Promise<ParseResult> {
       return { success: false, error: `Unsupported format ".${ext}". Please use PDF, DOCX, or TXT.` };
     }
 
-    if (!text || text.trim().length < 50) {
-      return { success: false, error: 'Could not extract enough text from the file. Please try a different format.', rawText: text };
+    if (!text || text.trim().length < 30) {
+      return { success: false, error: 'Could not extract enough text from the file. The file may be image-based or empty. Please try a different format (DOCX or TXT work best).', rawText: text };
     }
 
     const data = parseResumeText(text);
@@ -50,15 +50,15 @@ async function extractPDFText(file: File): Promise<string> {
 
     // Disable external worker entirely — run in fake-worker (main-thread) mode.
     // This avoids all CDN CORS/SharedArrayBuffer/defineProperty issues in pdfjs v5.
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+    if (typeof window !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+    }
 
     const arrayBuffer = await file.arrayBuffer();
 
     const loadingTask = pdfjsLib.getDocument({
       data: new Uint8Array(arrayBuffer),
-      useWorkerFetch: false,
       isEvalSupported: false,
-      useSystemFonts: true,
       disableFontFace: true,
     });
 
@@ -68,30 +68,65 @@ async function extractPDFText(file: File): Promise<string> {
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
-      const pageText = content.items
-        .map((item: any) => (item.str !== undefined ? item.str : ''))
-        .join(' ');
-      pages.push(pageText);
+
+      // Build page text preserving line breaks via Y-position changes
+      let prevY: number | null = null;
+      const lineParts: string[] = [];
+
+      for (const item of content.items) {
+        if (!('str' in item) || typeof (item as any).str !== 'string') continue;
+        const textItem = item as any;
+        const y = textItem.transform?.[5] ?? null;
+        // If Y position changed significantly, insert a line break
+        if (prevY !== null && y !== null && Math.abs(prevY - y) > 2) {
+          lineParts.push('\n');
+        }
+        lineParts.push(textItem.str);
+        if (y !== null) prevY = y;
+      }
+
+      pages.push(lineParts.join(' ').replace(/ *\n */g, '\n'));
     }
 
-    const result = pages.join('\n\n').replace(/\s{3,}/g, ' ').trim();
+    const result = pages.join('\n\n').replace(/[ \t]{3,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
     if (!result) throw new Error('No readable text found in this PDF');
     return result;
   } catch (err: any) {
     const msg = err?.message || 'Unknown error';
+    // Suppress confusing internal pdfjs messages for users
+    const userMsg = msg.includes('Missing PDF')
+      ? 'This file does not appear to be a valid PDF.'
+      : msg.includes('password')
+      ? 'This PDF is password-protected. Please remove the password first.'
+      : msg.includes('worker')
+      ? 'PDF worker failed to load. Please try uploading as DOCX or TXT instead.'
+      : `PDF parsing failed: ${msg}`;
     throw new Error(
-      `PDF parsing failed: ${msg}. ` +
-      `For best results, save your PDF from Word/Google Docs, or upload as DOCX/TXT instead.`
+      `${userMsg} For best results, save your PDF from Word/Google Docs, or upload as DOCX/TXT instead.`
     );
   }
 }
 
 /* ── DOCX Text Extraction ───────────────────────────────── */
 async function extractDOCXText(file: File): Promise<string> {
-  const mammoth = await import('mammoth');
-  const arrayBuffer = await file.arrayBuffer();
-  const result = await mammoth.extractRawText({ arrayBuffer });
-  return result.value;
+  try {
+    const mammoth = await import('mammoth');
+    const arrayBuffer = await file.arrayBuffer();
+
+    // mammoth.extractRawText accepts { arrayBuffer } for browser usage
+    const extractFn = mammoth.extractRawText || (mammoth as any).default?.extractRawText;
+    if (!extractFn) throw new Error('mammoth library loaded but extractRawText not found');
+
+    const result = await extractFn({ arrayBuffer });
+    if (!result || !result.value) throw new Error('No text content extracted from DOCX');
+    return result.value;
+  } catch (err: any) {
+    const msg = err?.message || 'Unknown error';
+    throw new Error(
+      `DOCX parsing failed: ${msg}. ` +
+      `Please make sure the file is a valid .docx (not .doc). You can also try PDF or TXT.`
+    );
+  }
 }
 
 /* ── Heuristic Parser ───────────────────────────────────── */

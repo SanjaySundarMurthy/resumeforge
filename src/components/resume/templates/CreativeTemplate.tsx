@@ -14,13 +14,13 @@ export default function CreativeTemplate({ data, style }: P) {
   const sideOrder = style.sectionOrder.filter(s => !hidden.has(s) && sideKeys.has(s));
   const BASE_FONT = style.fontSize === 'small' ? 10 : style.fontSize === 'large' ? 12.5 : 11;
   const fs = (r: number) => `${(BASE_FONT * r).toFixed(1)}px`;
-  const sp = style.sectionSpacing ?? 20;
+  const sp = style.sectionSpacing ?? 16;
   const psp = style.paragraphSpacing ?? 4;
 
   return (
     <div style={{ width: '794px', minHeight: '1123px', background: '#fff', fontFamily: style.fontFamily, fontSize: `${BASE_FONT}px`, lineHeight: style.lineHeight ?? 1.55, color: '#1a1a1a' }}>
       {/* ── TOP HEADER ── */}
-      <div style={{ padding: '36px 44px 24px', borderBottom: `3px solid ${c}` }}>
+      <div style={{ padding: `36px ${style.marginRight ?? 44}px 24px ${style.marginLeft ?? 44}px`, borderBottom: `3px solid ${c}` }}>
         <h1 style={{ fontSize: fs(2.55), fontWeight: 800, margin: 0, color: '#111' }}>{pi.firstName} <span style={{ color: c }}>{pi.lastName}</span></h1>
         {pi.title && <p style={{ fontSize: fs(1.18), color: '#666', marginTop: '2px', fontWeight: 500 }}>{pi.title}</p>}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '8px', fontSize: fs(0.91), color: '#888' }}>
@@ -31,7 +31,7 @@ export default function CreativeTemplate({ data, style }: P) {
       {/* ── TWO-COLUMN BODY ── */}
       <div style={{ display: 'flex' }}>
         {/* ── LEFT MAIN (65%) ── */}
-        <div style={{ width: '65%', padding: `24px 24px 24px ${style.marginLeft ?? 44}px` }}>
+        <div style={{ width: '65%', padding: `24px 24px 24px ${style.marginLeft ?? 44}px`, boxSizing: 'border-box' }}>
           {mainOrder.map((key) => {
             switch (key) {
               case 'summary': return summary ? <MainSec key={key} title="About" c={c} sp={sp} bf={BASE_FONT}><p style={{ fontSize: fs(1.0), lineHeight: '1.7', color: '#555' }}>{summary}</p></MainSec> : null;
@@ -103,10 +103,10 @@ export default function CreativeTemplate({ data, style }: P) {
   );
 }
 
-function MainSec({ title, c, sp = 20, bf = 11, children }: { title: string; c: string; sp?: number; bf?: number; children: React.ReactNode }) {
-  return <section style={{ marginBottom: `${sp}px` }}><h2 style={{ fontSize: `${(bf * 1.18).toFixed(1)}px`, fontWeight: 800, color: c, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '1.5px' }}>{title}</h2>{children}</section>;
+function MainSec({ title, c, sp = 16, bf = 11, children }: { title: string; c: string; sp?: number; bf?: number; children: React.ReactNode }) {
+  return <section style={{ marginBottom: `${sp}px` }}><h2 style={{ fontSize: `${(bf * 1.18).toFixed(1)}px`, fontWeight: 800, color: c, margin: `0 0 ${Math.min(sp, 10)}px`, textTransform: 'uppercase', letterSpacing: '1.5px' }}>{title}</h2>{children}</section>;
 }
 
-function SideSec({ title, c, sp = 18, bf = 11, children }: { title: string; c: string; sp?: number; bf?: number; children: React.ReactNode }) {
-  return <section style={{ marginBottom: `${sp}px` }}><h2 style={{ fontSize: `${(bf * 1.0).toFixed(1)}px`, fontWeight: 800, color: c, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '1px', paddingBottom: '4px', borderBottom: `2px solid ${c}` }}>{title}</h2>{children}</section>;
+function SideSec({ title, c, sp = 16, bf = 11, children }: { title: string; c: string; sp?: number; bf?: number; children: React.ReactNode }) {
+  return <section style={{ marginBottom: `${sp}px` }}><h2 style={{ fontSize: `${(bf * 1.0).toFixed(1)}px`, fontWeight: 800, color: c, margin: `0 0 ${Math.min(sp, 8)}px`, textTransform: 'uppercase', letterSpacing: '1px', paddingBottom: '4px', borderBottom: `2px solid ${c}` }}>{title}</h2>{children}</section>;
 }

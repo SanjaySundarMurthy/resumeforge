@@ -13,7 +13,7 @@ export default function ElegantTemplate({ data, style }: P) {
   const serif = `'Georgia', 'Playfair Display', ${style.fontFamily}, serif`;
   const BASE_FONT = style.fontSize === 'small' ? 10 : style.fontSize === 'large' ? 12.5 : 11;
   const fs = (r: number) => `${(BASE_FONT * r).toFixed(1)}px`;
-  const sp = style.sectionSpacing ?? 20;
+  const sp = style.sectionSpacing ?? 16;
   const psp = style.paragraphSpacing ?? 4;
 
   return (
@@ -86,11 +86,11 @@ export default function ElegantTemplate({ data, style }: P) {
   );
 }
 
-function Sec({ title, c, sp = 20, bf = 11, children }: { title: string; c: string; sp?: number; bf?: number; children: React.ReactNode }) {
+function Sec({ title, c, sp = 16, bf = 11, children }: { title: string; c: string; sp?: number; bf?: number; children: React.ReactNode }) {
   return (
     <section style={{ marginBottom: `${sp}px` }}>
       {/* Centered ornamental divider */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', margin: '4px 0 12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', margin: `4px 0 ${Math.min(sp, 12)}px` }}>
         <div style={{ flex: 1, height: '1px', background: '#e5e5e5' }} />
         <h2 style={{ fontSize: `${(bf * 1.0).toFixed(1)}px`, fontWeight: 400, letterSpacing: '3px', textTransform: 'uppercase', color: c, margin: 0, whiteSpace: 'nowrap' }}>— {title} —</h2>
         <div style={{ flex: 1, height: '1px', background: '#e5e5e5' }} />
