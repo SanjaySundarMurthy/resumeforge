@@ -1,8 +1,9 @@
 /* ── ResumeForge — Builder Page v3 ─────────────────────────── */
 'use client';
 
-import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
+import { useRef, useState, useCallback, useEffect, useMemo, Suspense, lazy } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useResumeStore } from '@/store/useResumeStore';
 import { generatePDF, generatePNG } from '@/lib/pdf-generator';
 import { parseResumeFile } from '@/lib/resume-parser';
@@ -23,7 +24,7 @@ import {
   Award, Languages, Star, Heart, BookOpen, Users, Palette, BarChart3,
   ChevronDown, ZoomIn, ZoomOut, RotateCcw, History, FileType,
   Trash2, RotateCw, Clock, Plus, Check, X, FileUp, Eraser,
-  AlertTriangle,
+  AlertTriangle, Keyboard, GripVertical,
 } from 'lucide-react';
 
 /* ── Section Icons ────────────────────────────────────────── */
@@ -82,6 +83,9 @@ export default function BuilderPage() {
   const [savingVersion, setSavingVersion] = useState(false);
   const [notification, setNotification] = useState('');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [sectionKey, setSectionKey] = useState(0); // For re-triggering animation
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [draggedSection, setDraggedSection] = useState<string | null>(null);
 
   const completeness = useMemo(() => getCompletenessScore(), [data]);
 
@@ -89,6 +93,52 @@ export default function BuilderPage() {
     setNotification(msg);
     setTimeout(() => setNotification(''), 3000);
   };
+
+  /* ── Keyboard Shortcuts ── */
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + S to save version
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        saveVersion();
+        notify('Version saved!');
+      }
+      // Ctrl/Cmd + E to export PDF
+      if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+        e.preventDefault();
+        handlePDF();
+      }
+      // Ctrl/Cmd + I to import
+      if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
+        e.preventDefault();
+        setShowImportZone(true);
+      }
+      // Escape to close modals
+      if (e.key === 'Escape') {
+        setShowImportZone(false);
+        setShowClearConfirm(false);
+        setShowExportMenu(false);
+        setShowShortcuts(false);
+      }
+      // Ctrl/Cmd + / to show shortcuts
+      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+        e.preventDefault();
+        setShowShortcuts(s => !s);
+      }
+      // Number keys 1-4 to switch tabs
+      if (e.key >= '1' && e.key <= '4' && !e.ctrlKey && !e.metaKey && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        const tabs: Tab[] = ['content', 'design', 'ats', 'history'];
+        setEditorTab(tabs[parseInt(e.key) - 1]);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [saveVersion]);
+
+  /* ── Section change animation trigger ── */
+  useEffect(() => {
+    setSectionKey(k => k + 1);
+  }, [activeSection]);
 
   /* ── Zoom ── */
   const zoomIn = useCallback(() => setPreviewScale(Math.min(previewScale + 0.1, 1.5)), [previewScale, setPreviewScale]);
@@ -278,6 +328,45 @@ export default function BuilderPage() {
         </div>
       )}
 
+      {/* ── Keyboard Shortcuts Modal ── */}
+      {showShortcuts && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowShortcuts(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4 animate-bounce-in" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Keyboard className="w-5 h-5 text-blue-600" />
+                <h3 className="text-sm font-bold text-gray-900">Keyboard Shortcuts</h3>
+              </div>
+              <button onClick={() => setShowShortcuts(false)} className="text-gray-400 hover:text-gray-700">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-2">
+              {[
+                { keys: ['Ctrl', 'S'], desc: 'Save version' },
+                { keys: ['Ctrl', 'E'], desc: 'Export as PDF' },
+                { keys: ['Ctrl', 'I'], desc: 'Import resume' },
+                { keys: ['Ctrl', '/'], desc: 'Show shortcuts' },
+                { keys: ['1-4'], desc: 'Switch tabs (Content/Design/ATS/History)' },
+                { keys: ['Esc'], desc: 'Close modal' },
+              ].map((shortcut, i) => (
+                <div key={i} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50">
+                  <span className="text-xs text-gray-600">{shortcut.desc}</span>
+                  <div className="flex items-center gap-1">
+                    {shortcut.keys.map((k, j) => (
+                      <kbd key={j} className="px-2 py-0.5 text-[10px] font-mono bg-gray-100 border border-gray-200 rounded text-gray-700">
+                        {k}
+                      </kbd>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-gray-400 mt-4 text-center">Press <kbd className="px-1 py-0.5 text-[9px] font-mono bg-gray-100 rounded">Ctrl</kbd> + <kbd className="px-1 py-0.5 text-[9px] font-mono bg-gray-100 rounded">/</kbd> anytime to toggle this</p>
+          </div>
+        </div>
+      )}
+
       {/* ── Import Modal ── */}
       {showImportZone && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -411,6 +500,14 @@ export default function BuilderPage() {
             <Upload className="w-3.5 h-3.5" /> Import
           </button>
 
+          <button
+            onClick={() => setShowShortcuts(true)}
+            className="btn-ghost p-1.5 hidden md:flex"
+            title="Keyboard shortcuts (Ctrl+/)"
+          >
+            <Keyboard className="w-4 h-4" />
+          </button>
+
           {/* Export dropdown */}
           <div className="relative">
             <button
@@ -503,7 +600,7 @@ export default function BuilderPage() {
                     </button>
                   ))}
                 </div>
-                <div className="flex-1 p-4 animate-fade-in overflow-y-auto">
+                <div key={sectionKey} className="flex-1 p-4 section-enter overflow-y-auto">
                   <h2 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
                     {SECTION_ICONS[activeSection]}
                     {activeSection === 'personalInfo' ? 'Personal Info' : SECTION_LABELS[activeSection as SectionKey]}
