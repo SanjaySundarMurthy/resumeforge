@@ -27,6 +27,7 @@ import {
   Trash2, RotateCw, Clock, Plus, Check, X, FileUp, Eraser,
   AlertTriangle, Keyboard, GripVertical, Undo2, Redo2,
   Eye, Loader2, PanelLeftClose, PanelLeft, Moon, Sun,
+  Maximize2,
 } from 'lucide-react';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { useAutoSave } from '@/hooks/useAutoSave';
@@ -164,6 +165,7 @@ export default function BuilderPage() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [sectionKey, setSectionKey] = useState(0);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   /* ── Mobile state ── */
   const [mobileView, setMobileView] = useState<'editor' | 'preview'>('editor');
@@ -477,6 +479,37 @@ export default function BuilderPage() {
         </div>
       )}
 
+      {/* ── Full-Screen Preview Modal ── */}
+      {showPreview && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-gray-900/95 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Resume preview">
+          {/* Preview toolbar */}
+          <div className="flex items-center justify-between px-6 py-3 bg-gray-800 border-b border-gray-700">
+            <div className="flex items-center gap-3">
+              <Maximize2 className="w-5 h-5 text-blue-400" />
+              <h3 className="text-sm font-bold text-white">Full-Screen Preview</h3>
+              <span className="text-xs text-gray-400 hidden sm:inline">This is how your resume will look when exported</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={handlePDF} className="btn-primary text-xs gap-1.5 px-4 py-2">
+                <Download className="w-3.5 h-3.5" /> Download PDF
+              </button>
+              <button onClick={handleExportDOCX} className="btn-secondary text-xs gap-1.5 px-4 py-2 text-white border-gray-600 hover:bg-gray-700">
+                <FileType className="w-3.5 h-3.5" /> DOCX
+              </button>
+              <button onClick={() => setShowPreview(false)} className="btn-ghost text-white p-2 hover:bg-gray-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+          {/* Preview body */}
+          <div className="flex-1 overflow-auto flex justify-center items-start py-8 px-4">
+            <div className="shadow-2xl shadow-black/50">
+              <ResumePreview data={data} style={style} scale={0.85} />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Import Modal ── */}
       {showImportZone && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="import-title">
@@ -633,6 +666,10 @@ export default function BuilderPage() {
             </button>
             {showExportMenu && (
               <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl shadow-xl border border-gray-200 py-1 z-50 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+                <button onClick={() => { setShowPreview(true); setShowExportMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                  <Maximize2 className="w-4 h-4 text-purple-500" /> Preview Before Export
+                </button>
+                <div className="border-t border-gray-100 my-1" />
                 <button onClick={handlePDF} className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
                   <Download className="w-4 h-4 text-red-500" /> Download PDF
                 </button>

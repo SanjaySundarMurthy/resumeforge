@@ -1,7 +1,8 @@
 /* ── Executive Template — Full-Width Banner + Thick Borders ── */
 'use client';
-import type { ResumeData, ResumeStyle } from '@/types/resume';
-import { formatDateRange, formatDate } from '@/lib/utils';
+import type { ResumeData, ResumeStyle, BulletStyle } from '@/types/resume';
+import { BULLET_SYMBOLS, NAME_SIZE_OPTIONS } from '@/types/resume';
+import { formatDateRange, formatDate, ensureUrl } from '@/lib/utils';
 
 interface P { data: ResumeData; style: ResumeStyle; }
 
@@ -14,20 +15,22 @@ export default function ExecutiveTemplate({ data, style }: P) {
   const fs = (r: number) => `${(BASE_FONT * r).toFixed(1)}px`;
   const sp = style.sectionSpacing ?? 16;
   const psp = style.paragraphSpacing ?? 4;
+  const bulletStyle = style.bulletStyle ?? 'disc';
+  const nameMultiplier = NAME_SIZE_OPTIONS.find(n => n.id === (style.nameSize ?? 'large'))?.multiplier ?? 2.55;
 
   return (
     <div style={{ width: '794px', minHeight: '1123px', background: '#fff', fontFamily: style.fontFamily, fontSize: `${BASE_FONT}px`, lineHeight: style.lineHeight ?? 1.55, color: '#1a1a1a' }}>
       {/* ── HEADER BANNER ── */}
       <div style={{ background: c, color: '#fff', padding: `36px ${style.marginRight ?? 56}px 36px ${style.marginLeft ?? 56}px`, position: 'relative' }}>
-        <h1 style={{ fontSize: fs(2.73), fontWeight: 700, margin: 0, letterSpacing: '1px' }}>{pi.firstName} {pi.lastName}</h1>
+        <h1 style={{ fontSize: fs(Math.max(nameMultiplier, 2.55)), fontWeight: 700, margin: 0, letterSpacing: '1px' }}>{pi.firstName} {pi.lastName}</h1>
         {pi.title && <p style={{ fontSize: fs(1.27), fontWeight: 400, opacity: 0.85, margin: '4px 0 0', letterSpacing: '1px' }}>{pi.title}</p>}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '12px', fontSize: fs(0.91), opacity: 0.8 }}>
-          {pi.email && <span>✉ {pi.email}</span>}
+          {pi.email && <a href={`mailto:${pi.email}`} style={{ color: 'inherit', textDecoration: 'none' }}>✉ {pi.email}</a>}
           {pi.phone && <span>☎ {pi.phone}</span>}
           {pi.location && <span>📍 {pi.location}</span>}
-          {pi.linkedin && <span>{pi.linkedin}</span>}
-          {pi.github && <span>{pi.github}</span>}
-          {pi.website && <span>{pi.website}</span>}
+          {pi.linkedin && <a href={ensureUrl(pi.linkedin)} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>{pi.linkedin}</a>}
+          {pi.github && <a href={ensureUrl(pi.github)} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>{pi.github}</a>}
+          {pi.website && <a href={ensureUrl(pi.website)} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>{pi.website}</a>}
         </div>
         {/* Decorative bottom strip */}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '4px', background: 'rgba(0,0,0,0.15)' }} />
@@ -45,7 +48,7 @@ export default function ExecutiveTemplate({ data, style }: P) {
                   <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '12px' }}><span style={{ fontSize: fs(0.91), background: `${c}15`, color: c, padding: '3px 10px', borderRadius: '4px', fontWeight: 600 }}>{formatDateRange(e.startDate, e.endDate, e.current)}</span></div>
                 </div>
                 {e.highlights.filter(Boolean).length > 0 && <ul style={{ margin: '8px 0 0 0', padding: 0, listStyle: 'none' }}>{e.highlights.filter(Boolean).map((h, j) => (
-                  <li key={j} style={{ fontSize: fs(0.95), color: '#374151', paddingLeft: '14px', position: 'relative', marginTop: `${psp}px` }}><span style={{ position: 'absolute', left: 0, top: '6px', width: '4px', height: '4px', background: c, borderRadius: '50%' }} />{h}</li>
+                  <li key={j} style={{ fontSize: fs(0.95), color: '#374151', paddingLeft: '14px', position: 'relative', marginTop: `${psp}px` }}>{bulletStyle === 'disc' ? <span style={{ position: 'absolute', left: 0, top: '6px', width: '4px', height: '4px', background: c, borderRadius: '50%' }} /> : bulletStyle !== 'none' ? <span style={{ position: 'absolute', left: 0, top: '2px', color: c }}>{BULLET_SYMBOLS[bulletStyle]}</span> : null}{h}</li>
                 ))}</ul>}
               </div>
             ))}</Sec> : null;
@@ -60,7 +63,7 @@ export default function ExecutiveTemplate({ data, style }: P) {
             ))}</div></Sec> : null;
             case 'projects': return projects.length > 0 ? <Sec key={key} title="Key Projects" c={c} sp={sp} bf={BASE_FONT}>{projects.map((p, i) => (
               <div key={p.id} style={{ marginTop: i > 0 ? '10px' : 0 }}>
-                <span style={{ fontWeight: 700, fontSize: fs(1.09) }}>{p.name}</span>{p.url && <span style={{ fontSize: fs(0.86), color: c, marginLeft: '8px' }}>{p.url}</span>}
+                <span style={{ fontWeight: 700, fontSize: fs(1.09) }}>{p.name}</span>{p.url && <a href={ensureUrl(p.url)} target="_blank" rel="noopener noreferrer" style={{ fontSize: fs(0.86), color: c, marginLeft: '8px', textDecoration: 'none' }}>{p.url}</a>}
                 {p.description && <p style={{ fontSize: fs(0.95), color: '#6b7280', margin: '2px 0 0' }}>{p.description}</p>}
                 {p.technologies.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>{p.technologies.map((t, j) => <span key={j} style={{ fontSize: fs(0.82), padding: '2px 8px', background: `${c}10`, color: c, borderRadius: '3px', fontWeight: 500 }}>{t}</span>)}</div>}
               </div>

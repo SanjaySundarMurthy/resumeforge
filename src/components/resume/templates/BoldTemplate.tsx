@@ -1,7 +1,8 @@
 /* ── Bold Template — Big Name, Thick Bars, Chunky Badges ── */
 'use client';
-import type { ResumeData, ResumeStyle } from '@/types/resume';
-import { formatDateRange, formatDate } from '@/lib/utils';
+import type { ResumeData, ResumeStyle, BulletStyle } from '@/types/resume';
+import { BULLET_SYMBOLS, NAME_SIZE_OPTIONS } from '@/types/resume';
+import { formatDateRange, formatDate, ensureUrl, isLinkable } from '@/lib/utils';
 
 interface P { data: ResumeData; style: ResumeStyle; }
 
@@ -14,20 +15,26 @@ export default function BoldTemplate({ data, style }: P) {
   const fs = (r: number) => `${(BASE_FONT * r).toFixed(1)}px`;
   const sp = style.sectionSpacing ?? 16;
   const psp = style.paragraphSpacing ?? 4;
+  const bulletStyle = style.bulletStyle ?? 'disc';
+  const nameMultiplier = NAME_SIZE_OPTIONS.find(n => n.id === (style.nameSize ?? 'large'))?.multiplier ?? 2.55;
 
   return (
     <div style={{ width: '794px', minHeight: '1123px', background: '#fff', fontFamily: style.fontFamily, fontSize: `${BASE_FONT}px`, lineHeight: style.lineHeight ?? 1.55, color: '#1a1a1a' }}>
       {/* ── HEADER — Bold split name ── */}
       <div style={{ padding: `40px ${style.marginRight ?? 48}px 28px ${style.marginLeft ?? 48}px`, borderBottom: `6px solid ${c}` }}>
-        <h1 style={{ fontSize: fs(3.82), fontWeight: 900, margin: 0, lineHeight: 1 }}>
+        <h1 style={{ fontSize: fs(Math.max(nameMultiplier, 3.0)), fontWeight: 900, margin: 0, lineHeight: 1 }}>
           <span style={{ color: '#111' }}>{pi.firstName}</span>{' '}
           <span style={{ color: c }}>{pi.lastName}</span>
         </h1>
         {pi.title && <p style={{ fontSize: fs(1.45), fontWeight: 600, color: '#6b7280', marginTop: '6px', letterSpacing: '1px', textTransform: 'uppercase' }}>{pi.title}</p>}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
-          {[pi.email, pi.phone, pi.location, pi.linkedin, pi.github, pi.website].filter(Boolean).map((info, i) => (
-            <span key={i} style={{ fontSize: fs(0.91), padding: '4px 12px', background: '#f3f4f6', borderRadius: '20px', color: '#555' }}>{info}</span>
-          ))}
+          {[pi.email, pi.phone, pi.location, pi.linkedin, pi.github, pi.website].filter(Boolean).map((info, i) => {
+            const linkable = isLinkable(info);
+            const inner = <span key={i} style={{ fontSize: fs(0.91), padding: '4px 12px', background: '#f3f4f6', borderRadius: '20px', color: '#555' }}>{info}</span>;
+            return linkable
+              ? <a key={i} href={ensureUrl(info)} target={info.includes('@') ? undefined : '_blank'} rel={info.includes('@') ? undefined : 'noopener noreferrer'} style={{ textDecoration: 'none' }}>{inner}</a>
+              : inner;
+          })}
         </div>
       </div>
 
@@ -50,7 +57,7 @@ export default function BoldTemplate({ data, style }: P) {
                 </div>
                 {e.highlights.filter(Boolean).length > 0 && <ul style={{ margin: '8px 0 0 0', padding: 0, listStyle: 'none' }}>{e.highlights.filter(Boolean).map((h, j) => (
                   <li key={j} style={{ fontSize: fs(0.95), color: '#4b5563', paddingLeft: '16px', position: 'relative', marginTop: `${psp}px` }}>
-                    <span style={{ position: 'absolute', left: 0, top: '3px', width: '8px', height: '8px', background: `${c}20`, borderRadius: '2px' }} />{h}
+                    {bulletStyle === 'disc' ? <span style={{ position: 'absolute', left: 0, top: '3px', width: '8px', height: '8px', background: `${c}20`, borderRadius: '2px' }} /> : bulletStyle !== 'none' ? <span style={{ position: 'absolute', left: 0, top: '1px', color: c, fontWeight: 700 }}>{BULLET_SYMBOLS[bulletStyle]}</span> : null}{h}
                   </li>
                 ))}</ul>}
               </div>
@@ -77,7 +84,7 @@ export default function BoldTemplate({ data, style }: P) {
               <div key={p.id} style={{ marginTop: i > 0 ? '12px' : 0 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                   <span style={{ fontWeight: 800, fontSize: fs(1.09) }}>{p.name}</span>
-                  {p.url && <span style={{ fontSize: fs(0.82), color: c, fontWeight: 600 }}>{p.url}</span>}
+                  {p.url && <a href={ensureUrl(p.url)} target="_blank" rel="noopener noreferrer" style={{ fontSize: fs(0.82), color: c, fontWeight: 600, textDecoration: 'none' }}>{p.url}</a>}
                 </div>
                 {p.description && <p style={{ fontSize: fs(0.95), color: '#6b7280', margin: '2px 0' }}>{p.description}</p>}
                 {p.technologies.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>{p.technologies.map((t, j) => <span key={j} style={{ fontSize: fs(0.82), fontWeight: 600, padding: '3px 8px', border: `2px solid ${c}`, color: c, borderRadius: '4px' }}>{t}</span>)}</div>}

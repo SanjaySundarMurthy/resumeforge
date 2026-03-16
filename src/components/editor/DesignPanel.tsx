@@ -1,13 +1,19 @@
-/* ── ResumeForge — Design Panel v3 ──────────────────────────── */
+/* ── ResumeForge — Design Panel v4 ──────────────────────────── */
 'use client';
 
 import { useState } from 'react';
 import { useResumeStore } from '@/store/useResumeStore';
-import { COLOR_PRESETS, FONT_OPTIONS, SECTION_LABELS } from '@/types/resume';
-import type { TemplateId, FontFamily, PageMode, SectionKey } from '@/types/resume';
+import {
+  COLOR_PRESETS, FONT_OPTIONS, SECTION_LABELS,
+  BULLET_OPTIONS, HEADER_STYLE_OPTIONS, SKILL_DISPLAY_OPTIONS,
+  DATE_ALIGNMENT_OPTIONS, NAME_SIZE_OPTIONS,
+} from '@/types/resume';
+import type {
+  TemplateId, FontFamily, PageMode,
+} from '@/types/resume';
 import {
   Check, Eye, EyeOff, Columns, FileText, Layout, Type,
-  Maximize, Minimize, AlignJustify, SlidersHorizontal,
+  AlignJustify, SlidersHorizontal,
   RotateCcw,
 } from 'lucide-react';
 import TemplateMiniPreview from '@/components/resume/TemplateMiniPreview';
@@ -54,6 +60,9 @@ export default function DesignPanel() {
       marginTop: 48, marginBottom: 48, marginLeft: 56, marginRight: 56,
       paragraphSpacing: 4, lineHeight: 1.5, sectionSpacing: 16,
       pageMode: 'auto', showPageBreakIndicators: true,
+      bulletStyle: 'disc', headerStyle: 'uppercase-underline',
+      skillDisplayMode: 'comma', dateAlignment: 'right',
+      nameSize: 'large', letterSpacing: 0, headerLetterSpacing: 1.5,
     });
   };
 
@@ -210,6 +219,136 @@ export default function DesignPanel() {
           unit="x"
           onChange={(v) => updateStyle({ lineHeight: v })}
         />
+      </section>
+
+      {/* ── Content Formatting ── */}
+      <section>
+        <h3 className="section-label mb-3">
+          <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5" /> Content Formatting
+        </h3>
+
+        {/* Bullet Style */}
+        <p className="text-[10px] text-gray-500 mb-2 font-medium">Bullet Point Style</p>
+        <div className="grid grid-cols-4 gap-1.5 mb-4">
+          {BULLET_OPTIONS.map((b) => {
+            const active = (style.bulletStyle ?? 'disc') === b.id;
+            return (
+              <button
+                key={b.id}
+                onClick={() => updateStyle({ bulletStyle: b.id })}
+                className={`flex flex-col items-center py-2 px-1 rounded-lg border text-center transition-all ${
+                  active ? 'border-blue-500 bg-blue-50 shadow-sm' : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <span className={`text-lg leading-none ${active ? 'text-blue-700' : 'text-gray-600'}`}>{b.symbol}</span>
+                <span className="text-[8px] text-gray-400 mt-1">{b.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Header Style */}
+        <p className="text-[10px] text-gray-500 mb-2 font-medium">Section Header Style</p>
+        <div className="space-y-1 mb-4">
+          {HEADER_STYLE_OPTIONS.map((h) => {
+            const active = (style.headerStyle ?? 'uppercase-underline') === h.id;
+            return (
+              <button
+                key={h.id}
+                onClick={() => updateStyle({ headerStyle: h.id })}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-left transition-all ${
+                  active ? 'border-blue-500 bg-blue-50 shadow-sm' : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-semibold ${active ? 'text-blue-700' : 'text-gray-700'}`}>{h.label}</span>
+                  <span className="text-[9px] text-gray-400">{h.desc}</span>
+                </div>
+                {active && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Skill Display Mode */}
+        <p className="text-[10px] text-gray-500 mb-2 font-medium">Skill Display Mode</p>
+        <div className="space-y-1 mb-4">
+          {SKILL_DISPLAY_OPTIONS.map((s) => {
+            const active = (style.skillDisplayMode ?? 'comma') === s.id;
+            return (
+              <button
+                key={s.id}
+                onClick={() => updateStyle({ skillDisplayMode: s.id })}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-left transition-all ${
+                  active ? 'border-blue-500 bg-blue-50 shadow-sm' : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <div>
+                  <span className={`text-xs font-semibold ${active ? 'text-blue-700' : 'text-gray-700'}`}>{s.label}</span>
+                  <span className="text-[9px] text-gray-400 ml-2">{s.desc}</span>
+                </div>
+                {active && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Date Alignment */}
+        <p className="text-[10px] text-gray-500 mb-2 font-medium">Date Alignment</p>
+        <div className="flex gap-2 mb-4">
+          {DATE_ALIGNMENT_OPTIONS.map((d) => {
+            const active = (style.dateAlignment ?? 'right') === d.id;
+            return (
+              <button
+                key={d.id}
+                onClick={() => updateStyle({ dateAlignment: d.id })}
+                className={`flex-1 py-2 px-2 rounded-lg border text-center transition-all ${
+                  active ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <span className="text-[10px] font-semibold">{d.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Name Size */}
+        <p className="text-[10px] text-gray-500 mb-2 font-medium">Name Display Size</p>
+        <div className="flex gap-2 mb-4">
+          {NAME_SIZE_OPTIONS.map((n) => {
+            const active = (style.nameSize ?? 'large') === n.id;
+            return (
+              <button
+                key={n.id}
+                onClick={() => updateStyle({ nameSize: n.id })}
+                className={`flex-1 py-2 rounded-lg border text-center transition-all ${
+                  active ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <span style={{ fontSize: `${10 + n.multiplier * 2}px`, fontWeight: 700 }} className="block leading-tight">Aa</span>
+                <span className="text-[9px] block mt-0.5">{n.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Letter Spacing */}
+        <SliderField
+          label="Body letter spacing"
+          value={style.letterSpacing ?? 0}
+          min={-0.5} max={2.0} step={0.1}
+          unit="px"
+          onChange={(v) => updateStyle({ letterSpacing: v })}
+        />
+        <div className="mt-2">
+          <SliderField
+            label="Header letter spacing"
+            value={style.headerLetterSpacing ?? 1.5}
+            min={0} max={4.0} step={0.25}
+            unit="px"
+            onChange={(v) => updateStyle({ headerLetterSpacing: v })}
+          />
+        </div>
       </section>
 
       {/* ── Formatting Presets ── */}

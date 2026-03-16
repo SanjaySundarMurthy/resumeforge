@@ -1,7 +1,8 @@
 /* ── Modern Template — TWO-COLUMN with Colored Sidebar ───── */
 'use client';
-import type { ResumeData, ResumeStyle } from '@/types/resume';
-import { formatDateRange, formatDate } from '@/lib/utils';
+import type { ResumeData, ResumeStyle, BulletStyle } from '@/types/resume';
+import { BULLET_SYMBOLS, NAME_SIZE_OPTIONS } from '@/types/resume';
+import { formatDateRange, formatDate, ensureUrl, isLinkable } from '@/lib/utils';
 
 interface P { data: ResumeData; style: ResumeStyle; }
 
@@ -16,6 +17,9 @@ export default function ModernTemplate({ data, style }: P) {
   const fs = (r: number) => `${(BASE_FONT * r).toFixed(1)}px`;
   const sp = style.sectionSpacing ?? 16;
   const psp = style.paragraphSpacing ?? 4;
+  const bulletStyle = style.bulletStyle ?? 'disc';
+  const nameMultiplier = NAME_SIZE_OPTIONS.find(n => n.id === (style.nameSize ?? 'large'))?.multiplier ?? 2.55;
+  const bodyLetterSpacing = `${style.letterSpacing ?? 0}px`;
 
   return (
     <div style={{ width: '794px', minHeight: '1123px', display: 'flex', background: '#fff', fontFamily: style.fontFamily, fontSize: `${BASE_FONT}px`, lineHeight: style.lineHeight ?? 1.5, color: '#1a1a1a' }}>
@@ -25,15 +29,18 @@ export default function ModernTemplate({ data, style }: P) {
         <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: fs(2.18), fontWeight: 700, marginBottom: '16px' }}>
           {(pi.firstName?.[0] || '')}{(pi.lastName?.[0] || '')}
         </div>
-        <h1 style={{ fontSize: fs(2.0), fontWeight: 700, lineHeight: '1.2', margin: 0 }}>{pi.firstName}<br/>{pi.lastName}</h1>
+        <h1 style={{ fontSize: fs(Math.min(nameMultiplier, 2.2)), fontWeight: 700, lineHeight: '1.2', margin: 0 }}>{pi.firstName}<br/>{pi.lastName}</h1>
         {pi.title && <p style={{ fontSize: fs(1.0), opacity: 0.85, marginTop: '4px', fontWeight: 500 }}>{pi.title}</p>}
 
         {/* Contact */}
         <div style={{ marginTop: '24px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '16px' }}>
           <h3 style={{ fontSize: fs(0.82), fontWeight: 700, letterSpacing: '2px', opacity: 0.6, marginBottom: '8px' }}>CONTACT</h3>
-          {[pi.email, pi.phone, pi.location, pi.linkedin, pi.github, pi.website].filter(Boolean).map((info, i) => (
-            <p key={i} style={{ fontSize: fs(0.86), opacity: 0.9, margin: '3px 0', wordBreak: 'break-all' }}>{info}</p>
-          ))}
+          {[pi.email, pi.phone, pi.location, pi.linkedin, pi.github, pi.website].filter(Boolean).map((info, i) => {
+            const linkable = isLinkable(info);
+            return linkable
+              ? <a key={i} href={ensureUrl(info)} target={info.includes('@') ? undefined : '_blank'} rel={info.includes('@') ? undefined : 'noopener noreferrer'} style={{ fontSize: fs(0.86), opacity: 0.9, margin: '3px 0', wordBreak: 'break-all' as const, color: 'inherit', textDecoration: 'none', display: 'block' }}>{info}</a>
+              : <p key={i} style={{ fontSize: fs(0.86), opacity: 0.9, margin: '3px 0', wordBreak: 'break-all' }}>{info}</p>;
+          })}
         </div>
 
         {/* Sidebar sections */}
@@ -72,7 +79,7 @@ export default function ModernTemplate({ data, style }: P) {
                   <span style={{ fontSize: fs(0.82), padding: '2px 8px', background: '#f3f4f6', borderRadius: '4px', color: '#6b7280', flexShrink: 0, marginLeft: '8px' }}>{formatDateRange(e.startDate, e.endDate, e.current)}</span>
                 </div>
                 {e.highlights.filter(Boolean).length > 0 && <ul style={{ margin: '6px 0 0', padding: 0, listStyle: 'none' }}>{e.highlights.filter(Boolean).map((h, j) => (
-                  <li key={j} style={{ fontSize: fs(0.95), color: '#374151', display: 'flex', gap: '6px', marginTop: `${psp}px` }}><span style={{ marginTop: '5px', width: '5px', height: '5px', borderRadius: '50%', background: `${c}40`, flexShrink: 0 }} /><span>{h}</span></li>
+                  <li key={j} style={{ fontSize: fs(0.95), color: '#374151', display: 'flex', gap: '6px', marginTop: `${psp}px`, letterSpacing: bodyLetterSpacing }}>{bulletStyle === 'disc' ? <span style={{ marginTop: '5px', width: '5px', height: '5px', borderRadius: '50%', background: `${c}40`, flexShrink: 0 }} /> : bulletStyle !== 'none' ? <span style={{ color: `${c}80`, flexShrink: 0 }}>{BULLET_SYMBOLS[bulletStyle]}</span> : null}<span>{h}</span></li>
                 ))}</ul>}
               </div>
             ))}</MainSec> : null;
@@ -83,7 +90,7 @@ export default function ModernTemplate({ data, style }: P) {
               </div>))}</MainSec> : null;
             case 'projects': return projects.length > 0 ? <MainSec key={key} title="Projects" c={c} sp={sp} bf={BASE_FONT}>{projects.map((p, i) => (
               <div key={p.id} style={{ marginTop: i > 0 ? '10px' : 0 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}><span style={{ fontWeight: 700, fontSize: fs(1.09) }}>{p.name}</span>{p.url && <span style={{ fontSize: fs(0.82), color: c }}>{p.url}</span>}</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}><span style={{ fontWeight: 700, fontSize: fs(1.09) }}>{p.name}</span>{p.url && <a href={ensureUrl(p.url)} target="_blank" rel="noopener noreferrer" style={{ fontSize: fs(0.82), color: c, textDecoration: 'none' }}>{p.url}</a>}</div>
                 {p.description && <p style={{ fontSize: fs(0.95), color: '#6b7280', margin: '2px 0 0' }}>{p.description}</p>}
                 {p.technologies.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>{p.technologies.map((t, j) => <span key={j} style={{ fontSize: fs(0.82), padding: '1px 6px', background: '#f3f4f6', borderRadius: '3px', color: '#6b7280' }}>{t}</span>)}</div>}
               </div>))}</MainSec> : null;

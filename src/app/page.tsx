@@ -6,7 +6,23 @@ import {
   Zap, CheckCircle2, Star, ArrowRight, ChevronDown, Layers,
   Target, Award, Globe, Users, Code2, Layout,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+
+/* ── Scroll-reveal hook ──────────────────────────────────── */
+function useScrollReveal() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { el.classList.add('revealed'); observer.unobserve(el); } },
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return ref;
+}
 
 /* ── Hero Section ────────────────────────────────────────── */
 
@@ -32,7 +48,7 @@ function Hero() {
           {/* Title */}
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-gray-900 animate-slide-up">
             Build Resumes That
-            <span className="block gradient-text mt-2">Land Interviews</span>
+            <span className="block gradient-text-animated mt-2">Land Interviews</span>
           </h1>
 
           {/* Subtitle */}
@@ -202,9 +218,10 @@ const features = [
 ];
 
 function Features() {
+  const ref = useScrollReveal();
   return (
     <section id="features" className="py-24 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div ref={ref} className="reveal max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
             Everything You Need to
@@ -248,9 +265,10 @@ const templates = [
 ];
 
 function Templates() {
+  const ref = useScrollReveal();
   return (
     <section id="templates" className="py-24 bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div ref={ref} className="reveal max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
             8 ATS-Friendly
@@ -324,6 +342,7 @@ function Templates() {
 /* ── How It Works ────────────────────────────────────────── */
 
 function HowItWorks() {
+  const ref = useScrollReveal();
   const steps = [
     { num: '01', title: 'Choose a Template', desc: 'Pick from 8 professionally designed, ATS-optimized templates.', icon: Layout },
     { num: '02', title: 'Fill In Your Details', desc: 'Enter your experience, education, and skills with our intuitive editor.', icon: FileText },
@@ -333,7 +352,7 @@ function HowItWorks() {
 
   return (
     <section className="py-24 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div ref={ref} className="reveal max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
             Ready in <span className="gradient-text">4 Simple Steps</span>
@@ -360,9 +379,70 @@ function HowItWorks() {
   );
 }
 
+/* ── Animated Score Ring ──────────────────────────────────── */
+
+function ScoreRing({ target }: { target: number }) {
+  const [score, setScore] = useState(0);
+  const ringRef = useRef<HTMLDivElement>(null);
+  const hasAnimated = useRef(false);
+
+  useEffect(() => {
+    const el = ringRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAnimated.current) {
+          hasAnimated.current = true;
+          let start = 0;
+          const duration = 1400;
+          const startTime = performance.now();
+          const animate = (now: number) => {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            start = Math.round(eased * target);
+            setScore(start);
+            if (progress < 1) requestAnimationFrame(animate);
+          };
+          requestAnimationFrame(animate);
+        }
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [target]);
+
+  const circumference = 2 * Math.PI * 85;
+  const strokeLen = circumference * (score / 100);
+
+  return (
+    <div ref={ringRef} className="relative w-64 h-64">
+      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
+        <circle cx="100" cy="100" r="85" stroke="rgba(255,255,255,0.1)" strokeWidth="12" fill="none" />
+        <circle
+          cx="100" cy="100" r="85"
+          stroke="#34d399"
+          strokeWidth="12"
+          fill="none"
+          strokeDasharray={`${strokeLen} ${circumference}`}
+          strokeLinecap="round"
+          style={{ transition: 'stroke-dasharray 0.1s ease-out' }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-5xl font-bold tabular-nums">{score}</span>
+        <span className="text-blue-200 text-sm">ATS Score</span>
+        <span className="text-green-400 text-xs font-semibold mt-1">{score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : 'Needs Work'}</span>
+      </div>
+    </div>
+  );
+}
+
 /* ── ATS ─────────────────────────────────────────────────── */
 
 function ATSSection() {
+  const ref = useScrollReveal();
   const checks = [
     'ATS-compatible formatting designed for clean parsing with standard section headings',
     'Machine-readable text — no images, tables, or complex multi-column layouts',
@@ -375,7 +455,7 @@ function ATSSection() {
   return (
     <section className="py-24 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white relative overflow-hidden">
       <div className="absolute inset-0 bg-grid opacity-5" />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+      <div ref={ref} className="reveal max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           <div>
             <h2 className="text-3xl sm:text-4xl font-bold mb-6">
@@ -397,25 +477,7 @@ function ATSSection() {
 
           {/* Score visualization */}
           <div className="flex justify-center">
-            <div className="relative w-64 h-64">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
-                <circle cx="100" cy="100" r="85" stroke="rgba(255,255,255,0.1)" strokeWidth="12" fill="none" />
-                <circle
-                  cx="100" cy="100" r="85"
-                  stroke="#34d399"
-                  strokeWidth="12"
-                  fill="none"
-                  strokeDasharray={`${2 * Math.PI * 85 * 0.92} ${2 * Math.PI * 85}`}
-                  strokeLinecap="round"
-                  className="transition-all duration-1000"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-5xl font-bold">92</span>
-                <span className="text-blue-200 text-sm">ATS Score</span>
-                <span className="text-green-400 text-xs font-semibold mt-1">Excellent</span>
-              </div>
-            </div>
+            <ScoreRing target={92} />
           </div>
         </div>
       </div>
@@ -447,9 +509,10 @@ const testimonials = [
 ];
 
 function Testimonials() {
+  const ref = useScrollReveal();
   return (
     <section className="py-24 bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div ref={ref} className="reveal max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
             Loved by <span className="gradient-text">Job Seekers</span>
@@ -512,11 +575,12 @@ const faqs = [
 ];
 
 function FAQ() {
+  const ref = useScrollReveal();
   const [open, setOpen] = useState<number | null>(null);
 
   return (
     <section className="py-24 bg-white">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div ref={ref} className="reveal max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
             Frequently Asked <span className="gradient-text">Questions</span>
@@ -554,10 +618,11 @@ function FAQ() {
 /* ── CTA Section ─────────────────────────────────────────── */
 
 function CTA() {
+  const ref = useScrollReveal();
   return (
     <section className="py-24 bg-gradient-to-br from-gray-900 via-gray-900 to-blue-900 text-white relative overflow-hidden">
       <div className="absolute inset-0 bg-dots opacity-10" />
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative">
+      <div ref={ref} className="reveal max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative">
         <h2 className="text-3xl sm:text-4xl font-bold mb-6">
           Your Dream Job Is One Resume Away
         </h2>

@@ -33,7 +33,9 @@ const ACTION_VERBS = new Set([
   'shipped','simplified','spearheaded','streamlined','transformed','unified','upgraded','validated',
 ]);
 
-const METRICS_PATTERN = /(\d+[x%+]|\d+\s*(million|billion|thousand|k\b|x\b)|(\$|€|£)\s*\d+|\d+\/\d+|\d+\s*(users|customers|engineers|hours|days|weeks|minutes|seconds|ms|requests|transactions|deployments|releases|clients))/gi;
+// NOTE: No global flag (g) — RegExp.test() with /g tracks lastIndex and
+// causes intermittent false negatives when reused across multiple strings.
+const METRICS_PATTERN = /(\d+[x%+]|\d+\s*(million|billion|thousand|k\b|x\b)|(\$|€|£)\s*\d+|\d+\/\d+|\d+\s*(users|customers|engineers|hours|days|weeks|minutes|seconds|ms|requests|transactions|deployments|releases|clients))/i;
 
 const FILLER_PHRASES = [
   'responsible for','worked on','helped with','assisted in','involved in','participated in',
@@ -106,15 +108,20 @@ export function calculateATSScore(
     if (!exp.length) {
       t.push({ severity: 'critical', section: 'Experience', message: 'Zero work experience — ATS auto-rejects this for 95% of roles', fix: 'Add internships, freelance, open-source, volunteer tech work — anything relevant', impact: 28 });
     } else {
-      s += 4;
+      // Base: has at least one job
+      s += 3;
       if (exp.length < 2) t.push({ severity: 'warning', section: 'Experience', message: 'Only 1 job listed — appears entry-level even if you\'re not', fix: 'Add ALL roles: part-time, contract, consulting, side projects as "Freelance [Role]"', impact: 3 });
-      else s += 4;
+      else s += 3;
+      // Bonus for 3+ jobs showing career progression
+      if (exp.length >= 3) s += 2;
 
       let totalBullets = 0, metricBullets = 0, weakBullets = 0, fillerBullets = 0, missingDates = 0;
+      let wellDocumentedJobs = 0;
 
       exp.forEach((e, i) => {
         const bullets = e.highlights.filter(Boolean);
         totalBullets += bullets.length;
+        if (bullets.length >= 3 && e.company && e.position) wellDocumentedJobs++;
         if (!e.company || !e.position) t.push({ severity: 'critical', section: 'Experience', message: `Job ${i+1} missing ${!e.company ? 'company name' : 'job title'} — ATS cannot parse incomplete entries`, fix: 'Fill in every field: title, company, dates, and at least 3 bullet points', impact: 3 });
         if (!e.startDate) missingDates++;
 
@@ -129,7 +136,12 @@ export function calculateATSScore(
         });
       });
 
-      if (missingDates > 0) t.push({ severity: 'warning', section: 'Experience', message: `${missingDates} job(s) missing dates — ATS cannot calculate total experience years`, fix: 'Add start/end dates to every role (YYYY-MM format)', impact: 3 });
+      // Bonus for well-documented roles (3+ bullets with title+company)
+      if (wellDocumentedJobs >= 2) s += 2;
+
+      // Bonus for complete date coverage
+      if (missingDates === 0) s += 2;
+      else t.push({ severity: 'warning', section: 'Experience', message: `${missingDates} job(s) missing dates — ATS cannot calculate total experience years`, fix: 'Add start/end dates to every role (YYYY-MM format)', impact: 3 });
 
       const ratio = totalBullets > 0 ? metricBullets / totalBullets : 0;
       if (ratio < 0.25) {
@@ -138,7 +150,7 @@ export function calculateATSScore(
       } else if (ratio < 0.5) {
         t.push({ severity: 'warning', section: 'Experience', message: `${Math.round(ratio*100)}% bullets have metrics — good but aim for 50%+. Top 10% candidates hit 65%.`, fix: 'Pick 3 more bullets and add numbers: users, %, $, speed, team size, time saved', impact: 5 });
         s += 9;
-      } else { s += 14; }
+      } else { s += 12; }
 
       if (weakBullets > 1) t.push({ severity: 'warning', section: 'Experience', message: `${weakBullets} bullets use passive verbs (worked/helped/made) — screams junior mindset`, fix: 'Use power verbs: "worked on X" → "Engineered X, reducing cost by 30%"', impact: 3 });
       if (fillerBullets > 0) t.push({ severity: 'warning', section: 'Experience', message: `${fillerBullets} bullets use filler phrases ("responsible for...") — ranks you average`, fix: 'Delete "Responsible for". Start with the action, end with the impact.', impact: 3 });
@@ -146,7 +158,10 @@ export function calculateATSScore(
       const allText = exp.flatMap(e => e.highlights).join(' ').toLowerCase();
       const usedVerbCount = Array.from(ACTION_VERBS).filter(v => allText.includes(v)).length;
       if (usedVerbCount < 5 && totalBullets > 5) t.push({ severity: 'tip', section: 'Experience', message: `Low verb variety (${usedVerbCount} unique power verbs) — ATS flags keyword monotony`, fix: 'Vary opening verbs: architected, championed, orchestrated, pioneered, scaled, unified', impact: 2 });
-      else if (totalBullets > 0) s += 3;
+      else if (totalBullets > 0) s += 4;
+
+      // No weak verbs bonus
+      if (weakBullets === 0 && totalBullets >= 3) s += 2;
     }
 
     brutalTips.push(...t);

@@ -6,6 +6,7 @@
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, convertInchesToTwip } from 'docx';
 import { saveAs } from 'file-saver';
 import type { ResumeData, ResumeStyle } from '@/types/resume';
+import { BULLET_SYMBOLS, NAME_SIZE_OPTIONS } from '@/types/resume';
 import { formatDateRange, formatDate } from '@/lib/utils';
 
 /* ── Colours ── */
@@ -18,13 +19,16 @@ const MID = '374151';
 export async function exportToDOCX(data: ResumeData, style: ResumeStyle, filename = 'resume.docx'): Promise<void> {
   const primaryHex = hexToDocx(style.primaryColor);
   const pi = data.personalInfo;
+  const bulletChar = BULLET_SYMBOLS[style.bulletStyle || 'disc'] || '•';
+  const nameSizeOpt = NAME_SIZE_OPTIONS.find(o => o.id === (style.nameSize || 'large'));
+  const nameDocxSize = Math.round((nameSizeOpt?.multiplier ?? 2.55) * 14);
 
   const children: Paragraph[] = [];
 
   /* ── NAME ── */
   children.push(
     new Paragraph({
-      children: [new TextRun({ text: `${pi.firstName} ${pi.lastName}`, bold: true, size: 36, color: DARK, font: style.fontFamily })],
+      children: [new TextRun({ text: `${pi.firstName} ${pi.lastName}`, bold: true, size: nameDocxSize, color: DARK, font: style.fontFamily })],
       alignment: AlignmentType.CENTER,
       spacing: { after: 40 },
     }),
@@ -59,12 +63,15 @@ export async function exportToDOCX(data: ResumeData, style: ResumeStyle, filenam
   const hidden = new Set(style.hiddenSections);
 
   /* ── BUILDER FUNCTION ── */
+  const hs = style.headerStyle || 'uppercase-underline';
   const addSection = (title: string, content: Paragraph[]) => {
+    const headerText = hs.startsWith('uppercase') ? title.toUpperCase() : title;
+    const showBorder = hs.includes('underline');
     children.push(
       new Paragraph({
-        children: [new TextRun({ text: title.toUpperCase(), bold: true, size: 22, color: primaryHex, font: style.fontFamily })],
+        children: [new TextRun({ text: headerText, bold: true, size: 22, color: primaryHex, font: style.fontFamily })],
         spacing: { before: 200, after: 80 },
-        border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: hexToDocx(style.primaryColor), space: 4 } },
+        ...(showBorder ? { border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: hexToDocx(style.primaryColor), space: 4 } } } : {}),
       }),
       ...content,
     );
@@ -72,7 +79,7 @@ export async function exportToDOCX(data: ResumeData, style: ResumeStyle, filenam
 
   const bullet = (text: string): Paragraph =>
     new Paragraph({
-      children: [new TextRun({ text: '•  ' + text, size: 20, color: MID, font: style.fontFamily })],
+      children: [new TextRun({ text: (style.bulletStyle === 'none' ? '' : bulletChar + '  ') + text, size: 20, color: MID, font: style.fontFamily })],
       spacing: { after: 40 },
       indent: { left: convertInchesToTwip(0.2) },
     });

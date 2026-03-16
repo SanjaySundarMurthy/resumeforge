@@ -7,6 +7,9 @@ import jsPDF from 'jspdf';
  * Captures the resume preview element at its NATIVE pixel size (794×1123 = A4
  * at 96 dpi).  We clone the element off-screen at 1:1 scale so html2canvas
  * never has to deal with CSS transforms or mm units.
+ *
+ * Optimized for file size: uses JPEG compression instead of lossless PNG,
+ * and a balanced scale factor for crisp text without multi-MB bloat.
  */
 export async function generatePDF(filename = 'resume.pdf'): Promise<void> {
   const el = document.getElementById('resume-preview');
@@ -26,7 +29,7 @@ export async function generatePDF(filename = 'resume.pdf'): Promise<void> {
 
   try {
     const canvas = await html2canvas(clone, {
-      scale: 2, // 2x for crisp text
+      scale: 1.5, // 1.5x: good balance of crisp text vs small file size (was 2x)
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
@@ -35,13 +38,15 @@ export async function generatePDF(filename = 'resume.pdf'): Promise<void> {
       windowWidth: 794,
     });
 
-    const imgData = canvas.toDataURL('image/png');
+    // Use JPEG at 85% quality — typically 3-5x smaller than PNG
+    const imgData = canvas.toDataURL('image/jpeg', 0.85);
 
     // A4: 210mm × 297mm
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4',
+      compress: true, // enable stream compression
     });
 
     const pdfWidth = 210;
@@ -49,22 +54,22 @@ export async function generatePDF(filename = 'resume.pdf'): Promise<void> {
 
     // Handle multi-page if content is taller than one A4 page
     const canvasAspect = canvas.height / canvas.width;
-    const singlePageHeight = pdfWidth * (1123 / 794); // Expected height in mm for one A4 page
     const contentHeight = pdfWidth * canvasAspect;
+    const scaleFactor = 1.5; // matches html2canvas scale above
 
     if (contentHeight <= pdfHeight + 2) {
       // Content fits in one page
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, contentHeight);
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, contentHeight, undefined, 'FAST');
     } else {
       // Multi-page: slice the canvas
-      const pageHeightPx = (pdfHeight / pdfWidth) * 794; // pixels per page
-      const totalPages = Math.ceil(canvas.height / (pageHeightPx * 2)); // account for scale: 2
+      const pageHeightPx = (pdfHeight / pdfWidth) * 794 * scaleFactor; // pixels per page at current scale
+      const totalPages = Math.ceil(canvas.height / pageHeightPx);
 
       for (let page = 0; page < totalPages; page++) {
         if (page > 0) pdf.addPage();
 
-        const srcY = page * pageHeightPx * 2;
-        const srcH = Math.min(pageHeightPx * 2, canvas.height - srcY);
+        const srcY = page * pageHeightPx;
+        const srcH = Math.min(pageHeightPx, canvas.height - srcY);
 
         // Create a sub-canvas for this page
         const pageCanvas = document.createElement('canvas');
@@ -72,10 +77,12 @@ export async function generatePDF(filename = 'resume.pdf'): Promise<void> {
         pageCanvas.height = srcH;
         const ctx = pageCanvas.getContext('2d');
         if (ctx) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
           ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
-          const pageImg = pageCanvas.toDataURL('image/png');
-          const pageH = (srcH / (pageHeightPx * 2)) * pdfHeight;
-          pdf.addImage(pageImg, 'PNG', 0, 0, pdfWidth, pageH);
+          const pageImg = pageCanvas.toDataURL('image/jpeg', 0.85);
+          const pageH = (srcH / pageHeightPx) * pdfHeight;
+          pdf.addImage(pageImg, 'JPEG', 0, 0, pdfWidth, pageH, undefined, 'FAST');
         }
       }
     }
@@ -111,10 +118,17 @@ export async function generatePNG(filename = 'resume.png'): Promise<void> {
       windowWidth: 794,
     });
 
-    const link = document.createElement('a');
-    link.download = filename;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+    // Use blob URL for more reliable download + proper cleanup
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = url;
+      link.click();
+      // Clean up the object URL after download triggers
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }, 'image/png');
   } finally {
     document.body.removeChild(clone);
   }

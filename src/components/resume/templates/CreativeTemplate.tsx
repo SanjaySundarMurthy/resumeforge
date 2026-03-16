@@ -1,7 +1,8 @@
 /* ── Creative Template — Reversed Two-Column (65/35) + Timeline ── */
 'use client';
-import type { ResumeData, ResumeStyle } from '@/types/resume';
-import { formatDateRange, formatDate } from '@/lib/utils';
+import type { ResumeData, ResumeStyle, BulletStyle } from '@/types/resume';
+import { BULLET_SYMBOLS, NAME_SIZE_OPTIONS } from '@/types/resume';
+import { formatDateRange, formatDate, ensureUrl, isLinkable } from '@/lib/utils';
 
 interface P { data: ResumeData; style: ResumeStyle; }
 
@@ -16,15 +17,22 @@ export default function CreativeTemplate({ data, style }: P) {
   const fs = (r: number) => `${(BASE_FONT * r).toFixed(1)}px`;
   const sp = style.sectionSpacing ?? 16;
   const psp = style.paragraphSpacing ?? 4;
+  const bulletStyle = style.bulletStyle ?? 'disc';
+  const nameMultiplier = NAME_SIZE_OPTIONS.find(n => n.id === (style.nameSize ?? 'large'))?.multiplier ?? 2.55;
 
   return (
     <div style={{ width: '794px', minHeight: '1123px', background: '#fff', fontFamily: style.fontFamily, fontSize: `${BASE_FONT}px`, lineHeight: style.lineHeight ?? 1.55, color: '#1a1a1a' }}>
       {/* ── TOP HEADER ── */}
       <div style={{ padding: `36px ${style.marginRight ?? 44}px 24px ${style.marginLeft ?? 44}px`, borderBottom: `3px solid ${c}` }}>
-        <h1 style={{ fontSize: fs(2.55), fontWeight: 800, margin: 0, color: '#111' }}>{pi.firstName} <span style={{ color: c }}>{pi.lastName}</span></h1>
+        <h1 style={{ fontSize: fs(nameMultiplier), fontWeight: 800, margin: 0, color: '#111' }}>{pi.firstName} <span style={{ color: c }}>{pi.lastName}</span></h1>
         {pi.title && <p style={{ fontSize: fs(1.18), color: '#666', marginTop: '2px', fontWeight: 500 }}>{pi.title}</p>}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '8px', fontSize: fs(0.91), color: '#888' }}>
-          {[pi.email, pi.phone, pi.location, pi.linkedin, pi.github, pi.website].filter(Boolean).map((info, i) => <span key={i}>{info}</span>)}
+          {[pi.email, pi.phone, pi.location, pi.linkedin, pi.github, pi.website].filter(Boolean).map((info, i) => {
+            const linkable = isLinkable(info);
+            return linkable
+              ? <a key={i} href={ensureUrl(info)} target={info.includes('@') ? undefined : '_blank'} rel={info.includes('@') ? undefined : 'noopener noreferrer'} style={{ color: '#888', textDecoration: 'none' }}>{info}</a>
+              : <span key={i}>{info}</span>;
+          })}
         </div>
       </div>
 
@@ -48,7 +56,7 @@ export default function CreativeTemplate({ data, style }: P) {
                     </div>
                     {e.highlights.filter(Boolean).length > 0 && <ul style={{ margin: '4px 0 0 0', padding: 0, listStyle: 'none' }}>{e.highlights.filter(Boolean).map((h, j) => (
                       <li key={j} style={{ fontSize: fs(0.95), color: '#555', paddingLeft: '12px', position: 'relative', marginTop: `${psp}px` }}>
-                        <span style={{ position: 'absolute', left: 0, top: '7px', width: '4px', height: '4px', background: '#d1d5db', borderRadius: '50%' }} />{h}
+                        {bulletStyle === 'disc' ? <span style={{ position: 'absolute', left: 0, top: '7px', width: '4px', height: '4px', background: '#d1d5db', borderRadius: '50%' }} /> : bulletStyle !== 'none' ? <span style={{ position: 'absolute', left: 0, top: '2px', color: '#999' }}>{BULLET_SYMBOLS[bulletStyle]}</span> : null}{h}
                       </li>
                     ))}</ul>}
                   </div>
@@ -56,7 +64,7 @@ export default function CreativeTemplate({ data, style }: P) {
               </div></MainSec> : null;
               case 'projects': return projects.length > 0 ? <MainSec key={key} title="Projects" c={c} sp={sp} bf={BASE_FONT}>{projects.map((p, i) => (
                 <div key={p.id} style={{ marginTop: i > 0 ? '10px' : 0, padding: '8px 10px', background: '#fafafa', borderRadius: '6px', border: '1px solid #f0f0f0' }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}><span style={{ fontWeight: 700, fontSize: fs(1.05) }}>{p.name}</span>{p.url && <span style={{ fontSize: fs(0.82), color: c }}>{p.url}</span>}</div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}><span style={{ fontWeight: 700, fontSize: fs(1.05) }}>{p.name}</span>{p.url && <a href={ensureUrl(p.url)} target="_blank" rel="noopener noreferrer" style={{ fontSize: fs(0.82), color: c, textDecoration: 'none' }}>{p.url}</a>}</div>
                   {p.description && <p style={{ fontSize: fs(0.91), color: '#777', margin: '2px 0 0' }}>{p.description}</p>}
                   {p.technologies.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '5px' }}>{p.technologies.map((t, j) => <span key={j} style={{ fontSize: fs(0.77), padding: '2px 6px', background: `${c}12`, color: c, borderRadius: '10px', fontWeight: 600 }}>{t}</span>)}</div>}
                 </div>

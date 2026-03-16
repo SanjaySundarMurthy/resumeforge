@@ -48,18 +48,24 @@ async function extractPDFText(file: File): Promise<string> {
     // Dynamically import pdfjs to avoid SSR issues
     const pdfjsLib = await import('pdfjs-dist');
 
-    // Disable external worker entirely — run in fake-worker (main-thread) mode.
-    // This avoids all CDN CORS/SharedArrayBuffer/defineProperty issues in pdfjs v5.
+    // pdfjs-dist v5: set workerSrc to empty string to force fake-worker (main-thread) mode
     if (typeof window !== 'undefined') {
       pdfjsLib.GlobalWorkerOptions.workerSrc = '';
     }
 
     const arrayBuffer = await file.arrayBuffer();
+    const data = new Uint8Array(arrayBuffer);
+
+    // Validate basic PDF header before passing to pdfjs
+    const header = Array.from(data.slice(0, 5)).map(b => String.fromCharCode(b)).join('');
+    if (data.length < 5 || header !== '%PDF-') {
+      throw new Error('Missing PDF header — file may be corrupted or not a real PDF');
+    }
 
     const loadingTask = pdfjsLib.getDocument({
-      data: new Uint8Array(arrayBuffer),
-      isEvalSupported: false,
+      data,
       disableFontFace: true,
+      isEvalSupported: false,
     });
 
     const pdf = await loadingTask.promise;

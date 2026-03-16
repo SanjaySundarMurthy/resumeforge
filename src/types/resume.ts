@@ -146,7 +146,7 @@ export type TemplateId =
   | 'elegant'
   | 'bold';
 
-export type FontFamily = 'Inter' | 'Merriweather' | 'Georgia' | 'Helvetica' | 'Times New Roman' | 'Calibri';
+export type FontFamily = 'Inter' | 'Merriweather' | 'Georgia' | 'Helvetica' | 'Times New Roman' | 'Calibri' | 'Lato' | 'Roboto' | 'Source Sans Pro' | 'Playfair Display';
 
 export type FontSize = 'small' | 'medium' | 'large';
 
@@ -165,6 +165,12 @@ export type SectionKey =
   | 'customSections';
 
 export type PageMode = 'auto' | 'single' | 'double' | 'triple';
+
+export type BulletStyle = 'disc' | 'dash' | 'triangle' | 'square' | 'diamond' | 'arrow' | 'star' | 'none';
+export type HeaderStyle = 'uppercase-underline' | 'uppercase' | 'capitalize-underline' | 'capitalize' | 'bold-only';
+export type SkillDisplayMode = 'comma' | 'tags' | 'bars';
+export type DateAlignment = 'right' | 'left' | 'inline';
+export type NameSize = 'small' | 'medium' | 'large' | 'xlarge';
 
 export interface ResumeStyle {
   template: TemplateId;
@@ -188,6 +194,14 @@ export interface ResumeStyle {
   marginRight: number;
   paragraphSpacing: number;
   showPageBreakIndicators: boolean;
+  // Extended formatting controls
+  bulletStyle: BulletStyle;
+  headerStyle: HeaderStyle;
+  skillDisplayMode: SkillDisplayMode;
+  dateAlignment: DateAlignment;
+  nameSize: NameSize;
+  letterSpacing: number;
+  headerLetterSpacing: number;
 }
 
 export interface ResumeDocument {
@@ -320,6 +334,14 @@ export const DEFAULT_STYLE: ResumeStyle = {
   marginRight: 56,
   paragraphSpacing: 4,
   showPageBreakIndicators: true,
+  // Extended formatting defaults
+  bulletStyle: 'disc',
+  headerStyle: 'uppercase-underline',
+  skillDisplayMode: 'comma',
+  dateAlignment: 'right',
+  nameSize: 'large',
+  letterSpacing: 0,
+  headerLetterSpacing: 1.5,
 };
 
 export const DEFAULT_RESUME_DATA: ResumeData = {
@@ -358,6 +380,10 @@ export const FONT_OPTIONS: { value: FontFamily; label: string; category: string 
   { value: 'Helvetica', label: 'Helvetica', category: 'Sans-serif' },
   { value: 'Times New Roman', label: 'Times New Roman', category: 'Serif' },
   { value: 'Calibri', label: 'Calibri', category: 'Sans-serif' },
+  { value: 'Lato', label: 'Lato', category: 'Sans-serif' },
+  { value: 'Roboto', label: 'Roboto', category: 'Sans-serif' },
+  { value: 'Source Sans Pro', label: 'Source Sans Pro', category: 'Sans-serif' },
+  { value: 'Playfair Display', label: 'Playfair Display', category: 'Serif' },
 ];
 
 export const SECTION_LABELS: Record<SectionKey, string> = {
@@ -374,3 +400,53 @@ export const SECTION_LABELS: Record<SectionKey, string> = {
   references: 'References',
   customSections: 'Custom Sections',
 };
+
+/* ── Bullet Style Symbols ─────────────────────────────────── */
+export const BULLET_SYMBOLS: Record<BulletStyle, string> = {
+  disc: '•',
+  dash: '–',
+  triangle: '▸',
+  square: '▪',
+  diamond: '◆',
+  arrow: '→',
+  star: '★',
+  none: '',
+};
+
+export const BULLET_OPTIONS: { id: BulletStyle; label: string; symbol: string }[] = [
+  { id: 'disc', label: 'Circle', symbol: '•' },
+  { id: 'dash', label: 'Dash', symbol: '–' },
+  { id: 'triangle', label: 'Triangle', symbol: '▸' },
+  { id: 'square', label: 'Square', symbol: '▪' },
+  { id: 'diamond', label: 'Diamond', symbol: '◆' },
+  { id: 'arrow', label: 'Arrow', symbol: '→' },
+  { id: 'star', label: 'Star', symbol: '★' },
+  { id: 'none', label: 'None', symbol: '—' },
+];
+
+export const HEADER_STYLE_OPTIONS: { id: HeaderStyle; label: string; desc: string }[] = [
+  { id: 'uppercase-underline', label: 'UPPERCASE + Line', desc: 'Classic ATS style' },
+  { id: 'uppercase', label: 'UPPERCASE', desc: 'Bold headers no line' },
+  { id: 'capitalize-underline', label: 'Capitalize + Line', desc: 'Elegant style' },
+  { id: 'capitalize', label: 'Capitalize', desc: 'Clean and simple' },
+  { id: 'bold-only', label: 'Bold Only', desc: 'Minimal approach' },
+];
+
+export const SKILL_DISPLAY_OPTIONS: { id: SkillDisplayMode; label: string; desc: string }[] = [
+  { id: 'comma', label: 'Comma List', desc: 'Category: Skill, Skill, Skill' },
+  { id: 'tags', label: 'Tags / Badges', desc: 'Visual keyword pills' },
+  { id: 'bars', label: 'Progress Bars', desc: 'Visual proficiency levels' },
+];
+
+export const DATE_ALIGNMENT_OPTIONS: { id: DateAlignment; label: string }[] = [
+  { id: 'right', label: 'Right-aligned' },
+  { id: 'left', label: 'Left (below title)' },
+  { id: 'inline', label: 'Inline with title' },
+];
+
+export const NAME_SIZE_OPTIONS: { id: NameSize; label: string; multiplier: number }[] = [
+  { id: 'small', label: 'Small', multiplier: 2.0 },
+  { id: 'medium', label: 'Medium', multiplier: 2.35 },
+  { id: 'large', label: 'Large', multiplier: 2.55 },
+  { id: 'xlarge', label: 'Extra Large', multiplier: 3.0 },
+];

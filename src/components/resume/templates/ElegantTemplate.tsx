@@ -1,7 +1,8 @@
 /* ── Elegant Template — Serif, Centered Dividers, Italic ── */
 'use client';
-import type { ResumeData, ResumeStyle } from '@/types/resume';
-import { formatDateRange, formatDate } from '@/lib/utils';
+import type { ResumeData, ResumeStyle, BulletStyle } from '@/types/resume';
+import { BULLET_SYMBOLS, NAME_SIZE_OPTIONS } from '@/types/resume';
+import { formatDateRange, formatDate, ensureUrl, isLinkable } from '@/lib/utils';
 
 interface P { data: ResumeData; style: ResumeStyle; }
 
@@ -15,12 +16,14 @@ export default function ElegantTemplate({ data, style }: P) {
   const fs = (r: number) => `${(BASE_FONT * r).toFixed(1)}px`;
   const sp = style.sectionSpacing ?? 16;
   const psp = style.paragraphSpacing ?? 4;
+  const bulletStyle = style.bulletStyle ?? 'disc';
+  const nameMultiplier = NAME_SIZE_OPTIONS.find(n => n.id === (style.nameSize ?? 'large'))?.multiplier ?? 2.55;
 
   return (
     <div style={{ width: '794px', minHeight: '1123px', padding: `${style.marginTop ?? 52}px ${style.marginRight ?? 64}px ${style.marginBottom ?? 52}px ${style.marginLeft ?? 64}px`, background: '#fff', fontFamily: serif, fontSize: `${BASE_FONT}px`, lineHeight: style.lineHeight ?? 1.65, color: '#2c2c2c' }}>
       {/* ── HEADER — elegant, centered ── */}
       <div style={{ textAlign: 'center', marginBottom: '6px' }}>
-        <h1 style={{ fontSize: fs(2.91), fontWeight: 400, letterSpacing: '6px', margin: 0, textTransform: 'uppercase', color: '#222' }}>{pi.firstName} {pi.lastName}</h1>
+        <h1 style={{ fontSize: fs(Math.max(nameMultiplier, 2.55)), fontWeight: 400, letterSpacing: '6px', margin: 0, textTransform: 'uppercase', color: '#222' }}>{pi.firstName} {pi.lastName}</h1>
         {pi.title && <p style={{ fontSize: fs(1.18), fontWeight: 400, fontStyle: 'italic', color: c, marginTop: '6px', letterSpacing: '2px' }}>{pi.title}</p>}
         {/* Ornamental divider */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', margin: '12px 0' }}>
@@ -29,9 +32,10 @@ export default function ElegantTemplate({ data, style }: P) {
           <div style={{ width: '60px', height: '1px', background: '#d4d4d4' }} />
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '6px', fontSize: fs(0.91), color: '#888' }}>
-          {[pi.email, pi.phone, pi.location, pi.linkedin, pi.github, pi.website].filter(Boolean).map((info, i, arr) => (
-            <span key={i}>{info}{i < arr.length - 1 ? <span style={{ margin: '0 4px', color: '#d4d4d4' }}>|</span> : ''}</span>
-          ))}
+          {[pi.email, pi.phone, pi.location, pi.linkedin, pi.github, pi.website].filter(Boolean).map((info, i, arr) => {
+            const linkable = isLinkable(info);
+            return <span key={i}>{linkable ? <a href={ensureUrl(info)} target={info.includes('@') ? undefined : '_blank'} rel={info.includes('@') ? undefined : 'noopener noreferrer'} style={{ color: 'inherit', textDecoration: 'none' }}>{info}</a> : info}{i < arr.length - 1 ? <span style={{ margin: '0 4px', color: '#d4d4d4' }}>|</span> : ''}</span>;
+          })}
         </div>
       </div>
 
@@ -49,7 +53,9 @@ export default function ElegantTemplate({ data, style }: P) {
                 <span style={{ fontSize: fs(0.91), color: '#aaa', flexShrink: 0, fontStyle: 'italic' }}>{formatDateRange(e.startDate, e.endDate, e.current)}</span>
               </div>
               {e.highlights.filter(Boolean).length > 0 && <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>{e.highlights.filter(Boolean).map((h, j) => (
-                <li key={j} style={{ fontSize: fs(0.95), color: '#555', marginTop: `${psp}px`, lineHeight: '1.6' }}>{h}</li>
+                <li key={j} style={{ fontSize: fs(0.95), color: '#555', marginTop: `${psp}px`, lineHeight: '1.6', listStyleType: bulletStyle === 'none' ? 'none' : bulletStyle === 'disc' ? 'disc' : 'none', paddingLeft: bulletStyle !== 'disc' && bulletStyle !== 'none' ? '0' : undefined }}>
+                  {bulletStyle !== 'disc' && bulletStyle !== 'none' ? <span style={{ marginRight: '4px', color: c }}>{BULLET_SYMBOLS[bulletStyle]}</span> : null}{h}
+                </li>
               ))}</ul>}
             </div>
           ))}</Sec> : null;
@@ -68,7 +74,7 @@ export default function ElegantTemplate({ data, style }: P) {
           case 'projects': return projects.length > 0 ? <Sec key={key} title="Notable Projects" c={c} sp={sp} bf={BASE_FONT}>{projects.map((p, i) => (
             <div key={p.id} style={{ marginTop: i > 0 ? '10px' : 0 }}>
               <span style={{ fontWeight: 700, fontSize: fs(1.09) }}>{p.name}</span>
-              {p.url && <span style={{ fontSize: fs(0.86), color: c, fontStyle: 'italic', marginLeft: '8px' }}>{p.url}</span>}
+              {p.url && <a href={ensureUrl(p.url)} target="_blank" rel="noopener noreferrer" style={{ fontSize: fs(0.86), color: c, fontStyle: 'italic', marginLeft: '8px', textDecoration: 'none' }}>{p.url}</a>}
               {p.description && <p style={{ fontSize: fs(0.95), color: '#777', fontStyle: 'italic', margin: '2px 0 0' }}>{p.description}</p>}
               {p.technologies.length > 0 && <p style={{ fontSize: fs(0.86), color: '#999', margin: '2px 0 0' }}>{p.technologies.join(' · ')}</p>}
             </div>

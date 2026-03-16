@@ -1,7 +1,8 @@
 /* ── Technical Template — Terminal / Code Aesthetic ──────── */
 'use client';
-import type { ResumeData, ResumeStyle } from '@/types/resume';
-import { formatDateRange, formatDate } from '@/lib/utils';
+import type { ResumeData, ResumeStyle, BulletStyle } from '@/types/resume';
+import { BULLET_SYMBOLS, NAME_SIZE_OPTIONS } from '@/types/resume';
+import { formatDateRange, formatDate, ensureUrl } from '@/lib/utils';
 
 interface P { data: ResumeData; style: ResumeStyle; }
 
@@ -16,6 +17,8 @@ export default function TechnicalTemplate({ data, style }: P) {
   const fs = (r: number) => `${(BASE_FONT * r).toFixed(1)}px`;
   const sp = style.sectionSpacing ?? 16;
   const psp = style.paragraphSpacing ?? 4;
+  const bulletStyle = style.bulletStyle ?? 'disc';
+  const nameMultiplier = NAME_SIZE_OPTIONS.find(n => n.id === (style.nameSize ?? 'large'))?.multiplier ?? 2.55;
 
   return (
     <div style={{ width: '794px', minHeight: '1123px', background: '#fff', fontFamily: style.fontFamily, fontSize: `${BASE_FONT}px`, lineHeight: style.lineHeight ?? 1.55, color: '#1f2937' }}>
@@ -30,17 +33,17 @@ export default function TechnicalTemplate({ data, style }: P) {
         <p style={{ fontFamily: mono, fontSize: fs(1.0), color: '#6c7086', margin: '0 0 4px' }}>
           <span style={{ color: '#a6e3a1' }}>$</span> cat resume.json | jq &apos;.personal&apos;
         </p>
-        <h1 style={{ fontSize: fs(2.36), fontWeight: 700, margin: 0, color: '#cdd6f4', fontFamily: mono }}>
+        <h1 style={{ fontSize: fs(Math.max(nameMultiplier, 2.36)), fontWeight: 700, margin: 0, color: '#cdd6f4', fontFamily: mono }}>
           {pi.firstName} {pi.lastName}
         </h1>
         {pi.title && <p style={{ fontSize: fs(1.18), color: c, fontFamily: mono, margin: '2px 0 0' }}>{pi.title}</p>}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '10px', fontFamily: mono, fontSize: fs(0.91), color: '#a6adc8' }}>
-          {pi.email && <span>{pi.email}</span>}
+          {pi.email && <a href={`mailto:${pi.email}`} style={{ color: '#a6adc8', textDecoration: 'none' }}>{pi.email}</a>}
           {pi.phone && <span>{pi.phone}</span>}
           {pi.location && <span>{pi.location}</span>}
-          {pi.linkedin && <span>{pi.linkedin}</span>}
-          {pi.github && <span>{pi.github}</span>}
-          {pi.website && <span>{pi.website}</span>}
+          {pi.linkedin && <a href={ensureUrl(pi.linkedin)} target="_blank" rel="noopener noreferrer" style={{ color: '#a6adc8', textDecoration: 'none' }}>{pi.linkedin}</a>}
+          {pi.github && <a href={ensureUrl(pi.github)} target="_blank" rel="noopener noreferrer" style={{ color: '#a6adc8', textDecoration: 'none' }}>{pi.github}</a>}
+          {pi.website && <a href={ensureUrl(pi.website)} target="_blank" rel="noopener noreferrer" style={{ color: '#a6adc8', textDecoration: 'none' }}>{pi.website}</a>}
         </div>
       </div>
 
@@ -60,7 +63,7 @@ export default function TechnicalTemplate({ data, style }: P) {
                 </div>
                 {e.highlights.filter(Boolean).length > 0 && <ul style={{ margin: '6px 0 0', padding: 0, listStyle: 'none' }}>{e.highlights.filter(Boolean).map((h, j) => (
                   <li key={j} style={{ fontSize: fs(0.95), color: '#4b5563', paddingLeft: '18px', position: 'relative', marginTop: `${psp}px`, fontFamily: mono }}>
-                    <span style={{ position: 'absolute', left: 0, color: '#d1d5db', fontWeight: 700 }}>&gt;</span>{h}
+                    {bulletStyle === 'disc' ? <span style={{ position: 'absolute', left: 0, color: '#d1d5db', fontWeight: 700 }}>&gt;</span> : bulletStyle !== 'none' ? <span style={{ position: 'absolute', left: 0, color: c, fontWeight: 700 }}>{BULLET_SYMBOLS[bulletStyle]}</span> : null}{h}
                   </li>
                 ))}</ul>}
               </div>
@@ -78,7 +81,7 @@ export default function TechnicalTemplate({ data, style }: P) {
               <div key={p.id} style={{ marginTop: i > 0 ? '10px' : 0, padding: '8px 12px', background: '#fafafa', borderRadius: '6px', border: '1px solid #f3f4f6' }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                   <span style={{ fontWeight: 700, fontSize: fs(1.05), fontFamily: mono }}>{p.name}</span>
-                  {p.url && <span style={{ fontSize: fs(0.82), color: c, fontFamily: mono }}>{p.url}</span>}
+                  {p.url && <a href={ensureUrl(p.url)} target="_blank" rel="noopener noreferrer" style={{ fontSize: fs(0.82), color: c, fontFamily: mono, textDecoration: 'none' }}>{p.url}</a>}
                 </div>
                 {p.description && <p style={{ fontSize: fs(0.91), color: '#888', margin: '2px 0 0' }}>{p.description}</p>}
                 {p.technologies.length > 0 && <p style={{ fontSize: fs(0.82), color: '#aaa', fontFamily: mono, margin: '4px 0 0' }}>deps: [{p.technologies.join(', ')}]</p>}

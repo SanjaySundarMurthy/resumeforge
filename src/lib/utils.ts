@@ -98,6 +98,7 @@ export function getFontClass(font: string): string {
     'JetBrains Mono': 'font-mono',
     'Times New Roman': 'font-serif',
   };
+
   return map[font] || 'font-sans';
 }
 
@@ -140,4 +141,22 @@ export function downloadBlob(blob: Blob, filename: string) {
 export function downloadText(text: string, filename: string, type = 'application/json') {
   const blob = new Blob([text], { type });
   downloadBlob(blob, filename);
+}
+
+/**
+ * Ensure a URL has a protocol prefix
+ */
+export function ensureUrl(url: string): string {
+  if (!url) return '';
+  if (url.includes('@') && !url.startsWith('mailto:')) return `mailto:${url}`;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `https://${url}`;
+}
+
+/**
+ * Check if a contact string is linkable (URL or email)
+ */
+export function isLinkable(text: string): boolean {
+  if (!text) return false;
+  return text.includes('@') || text.includes('linkedin') || text.includes('github') || text.startsWith('http') || /\.[a-z]{2,}(\/|$)/i.test(text);
 }
