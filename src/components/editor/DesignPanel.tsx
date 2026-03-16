@@ -316,7 +316,7 @@ export default function DesignPanel() {
             </div>
             <SliderField
               label="Section spacing"
-              value={style.sectionSpacing ?? 24}
+              value={style.sectionSpacing ?? 16}
               min={8} max={48} step={4}
               unit="px"
               onChange={(v) => updateStyle({ sectionSpacing: v })}
@@ -438,7 +438,7 @@ function ToggleField({
       <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={`relative w-10 h-5.5 rounded-full transition-colors shrink-0 ${
+        className={`relative rounded-full transition-colors shrink-0 ${
           checked ? 'bg-blue-500' : 'bg-gray-200'
         }`}
         style={{ width: '40px', height: '22px' }}

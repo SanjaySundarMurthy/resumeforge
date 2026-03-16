@@ -216,38 +216,12 @@ export default function BuilderPage() {
     return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
   }, [data, style]);
 
-  const completeness = useMemo(() => getCompletenessScore(), [data]);
+  const completeness = useMemo(() => getCompletenessScore(), [data, getCompletenessScore]);
 
-  const notify = (msg: string) => {
+  const notify = useCallback((msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(''), 3000);
-  };
-
-  /* ── Keyboard Shortcuts ── */
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const ctrl = e.ctrlKey || e.metaKey;
-      if (ctrl && e.key === 's') { e.preventDefault(); saveVersion(); notify('Version saved!'); }
-      if (ctrl && e.key === 'e') { e.preventDefault(); handlePDF(); }
-      if (ctrl && e.key === 'i') { e.preventDefault(); setShowImportZone(true); }
-      if (ctrl && e.key === 'z' && !e.shiftKey) { e.preventDefault(); handleUndo(); }
-      if (ctrl && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); handleRedo(); }
-      if (e.key === 'Escape') {
-        setShowImportZone(false); setShowClearConfirm(false);
-        setShowExportMenu(false); setShowShortcuts(false);
-      }
-      if (ctrl && e.key === '/') { e.preventDefault(); setShowShortcuts(s => !s); }
-      if (e.key >= '1' && e.key <= '4' && !ctrl && !e.metaKey
-        && document.activeElement?.tagName !== 'INPUT'
-        && document.activeElement?.tagName !== 'TEXTAREA'
-        && document.activeElement?.tagName !== 'SELECT') {
-        const tabs: Tab[] = ['content', 'design', 'ats', 'history'];
-        setEditorTab(tabs[parseInt(e.key) - 1]);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [saveVersion, handleUndo, handleRedo]);
+  }, []);
 
   /* ── Section change animation ── */
   useEffect(() => { setSectionKey(k => k + 1); }, [activeSection]);
@@ -255,7 +229,7 @@ export default function BuilderPage() {
   /* ── Zoom ── */
   const zoomIn = useCallback(() => setPreviewScale(Math.min(previewScale + 0.1, 1.5)), [previewScale, setPreviewScale]);
   const zoomOut = useCallback(() => setPreviewScale(Math.max(previewScale - 0.1, 0.3)), [previewScale, setPreviewScale]);
-  const zoomReset = useCallback(() => setPreviewScale(0.55), [setPreviewScale]);
+  const zoomReset = useCallback(() => setPreviewScale(0.6), [setPreviewScale]);
 
   const getFilename = useCallback(() =>
     `${data.personalInfo.firstName || 'resume'}_${data.personalInfo.lastName || 'export'}`.replace(/\s+/g, '_'),
@@ -353,6 +327,33 @@ export default function BuilderPage() {
   const handleRestoreVersion = useCallback((id: string) => {
     restoreVersion(id); notify('Version restored!');
   }, [restoreVersion]);
+
+  /* ── Keyboard Shortcuts ── */
+  /* Placed here so all handlers (handlePDF etc.) are already defined in this scope */
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (ctrl && e.key === 's') { e.preventDefault(); saveVersion(); notify('Version saved!'); }
+      if (ctrl && e.key === 'e') { e.preventDefault(); handlePDF(); }
+      if (ctrl && e.key === 'i') { e.preventDefault(); setShowImportZone(true); }
+      if (ctrl && e.key === 'z' && !e.shiftKey) { e.preventDefault(); handleUndo(); }
+      if (ctrl && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); handleRedo(); }
+      if (e.key === 'Escape') {
+        setShowImportZone(false); setShowClearConfirm(false);
+        setShowExportMenu(false); setShowShortcuts(false);
+      }
+      if (ctrl && e.key === '/') { e.preventDefault(); setShowShortcuts(s => !s); }
+      if (e.key >= '1' && e.key <= '4' && !ctrl && !e.metaKey
+        && document.activeElement?.tagName !== 'INPUT'
+        && document.activeElement?.tagName !== 'TEXTAREA'
+        && document.activeElement?.tagName !== 'SELECT') {
+        const tabs: Tab[] = ['content', 'design', 'ats', 'history'];
+        setEditorTab(tabs[parseInt(e.key) - 1]);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [saveVersion, handleUndo, handleRedo, handlePDF, notify]);
 
   /* ── Close export on outside click ── */
   useEffect(() => {

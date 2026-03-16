@@ -59,13 +59,20 @@ const ResumePreview = forwardRef<HTMLDivElement, ResumePreviewProps>(
     const pageConstraints = getPageConstraints(style.pageMode);
     const pageCount = style.pageMode === 'double' ? 2 : style.pageMode === 'triple' ? 3 : 1;
 
+    // Compensate for CSS transform not affecting layout dimensions:
+    // the inner div is still 794×(A4_H*pageCount)px in layout space even though
+    // it's visually scaled down.  A negative margin-bottom pulls the outer div's
+    // auto-height down to the *visual* height of the scaled content.
+    const layoutHeightBase = A4_H * pageCount;
+    const marginBottomCompensation = -(layoutHeightBase * (1 - scale));
+
     return (
       <div
         className={className}
         style={{
           width: `${794 * scale}px`,
-          height: 'auto',
-          overflow: 'visible',
+          overflow: 'hidden',  // clip the layout-space horizontal/vertical overflow
+          flexShrink: 0,
         }}
       >
         <div
@@ -76,8 +83,9 @@ const ResumePreview = forwardRef<HTMLDivElement, ResumePreviewProps>(
             transform: `scale(${scale})`,
             width: '794px',
             background: '#fff',
-            boxShadow: scale < 1 ? 'none' : '0 4px 24px rgba(0,0,0,0.08)',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
             position: 'relative',
+            marginBottom: `${marginBottomCompensation}px`,
             ...pageConstraints,
           }}
         >
