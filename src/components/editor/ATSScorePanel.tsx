@@ -1,4 +1,4 @@
-/* ── ResumeForge — ATS Score Panel v2 (Brutal & Honest) ─────── */
+/* ── ResumeForge — ATS Score Panel v3 (Brutal & Honest + Job URL) ── */
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -8,6 +8,7 @@ import type { JobDescription } from '@/types/resume';
 import {
   CheckCircle2, AlertTriangle, XCircle, Lightbulb,
   Briefcase, Target, ChevronDown, ChevronUp, Zap,
+  Link2, Loader2, Globe, ClipboardPaste,
 } from 'lucide-react';
 
 /* ── Brutality tips severity config ─────────────────────── */
@@ -24,6 +25,9 @@ export default function ATSScorePanel() {
   const [showJDInput, setShowJDInput] = useState(false);
   const [localJD, setLocalJD] = useState<JobDescription>(jobDescription);
   const [expandedTips, setExpandedTips] = useState<Set<number>>(new Set());
+  const [jobUrl, setJobUrl] = useState('');
+  const [fetchingUrl, setFetchingUrl] = useState(false);
+  const [urlError, setUrlError] = useState('');
 
   const completeness = useMemo(() => getCompletenessScore(), [data]);
 
@@ -45,6 +49,79 @@ export default function ATSScorePanel() {
   const handleSaveJD = () => {
     setJobDescription(localJD);
     setShowJDInput(false);
+  };
+
+  /* ── Job URL fetch — extracts text from a job posting URL ── */
+  const handleFetchJobUrl = async () => {
+    if (!jobUrl.trim()) return;
+    setFetchingUrl(true);
+    setUrlError('');
+    try {
+      // Use a public CORS proxy to fetch the page HTML
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(jobUrl.trim())}`;
+      const resp = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
+      if (!resp.ok) throw new Error('Failed to fetch page');
+      const html = await resp.text();
+
+      // Parse HTML and extract meaningful text
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+
+      // Remove script, style, nav, header, footer elements
+      doc.querySelectorAll('script, style, nav, header, footer, noscript, iframe, svg').forEach(el => el.remove());
+
+      // Try to find job description containers
+      const selectors = [
+        '[class*="job-description"]', '[class*="jobDescription"]',
+        '[class*="job-details"]', '[class*="jobDetails"]',
+        '[class*="description__text"]', '[class*="posting-requirements"]',
+        '[id*="job-description"]', '[id*="jobDescription"]',
+        'article', '[role="main"]', 'main',
+      ];
+
+      let jobText = '';
+      for (const sel of selectors) {
+        const el = doc.querySelector(sel);
+        if (el && el.textContent && el.textContent.trim().length > 100) {
+          jobText = el.textContent.trim();
+          break;
+        }
+      }
+
+      // Fallback: use body text
+      if (!jobText || jobText.length < 100) {
+        jobText = doc.body?.textContent?.trim() || '';
+      }
+
+      // Clean up whitespace
+      jobText = jobText.replace(/\s+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+
+      // Try to extract title from page
+      const titleEl = doc.querySelector('h1') || doc.querySelector('title');
+      const pageTitle = titleEl?.textContent?.trim() || '';
+
+      if (jobText.length < 50) {
+        setUrlError('Could not extract enough text from this URL. Try pasting the job description directly.');
+      } else {
+        // Truncate if too long
+        if (jobText.length > 5000) jobText = jobText.slice(0, 5000);
+
+        setLocalJD({
+          title: pageTitle.slice(0, 100) || localJD.title,
+          company: localJD.company,
+          text: jobText,
+        });
+        setJobUrl('');
+      }
+    } catch (err: any) {
+      if (err.name === 'AbortError' || err.name === 'TimeoutError') {
+        setUrlError('Request timed out. Please paste the job description manually.');
+      } else {
+        setUrlError('Could not fetch URL. Try pasting the job description directly instead.');
+      }
+    } finally {
+      setFetchingUrl(false);
+    }
   };
 
   const toggleTip = (i: number) => {
@@ -140,6 +217,37 @@ export default function ATSScorePanel() {
 
         {showJDInput && (
           <div className="p-4 border-t border-gray-100 bg-gray-50 space-y-3">
+            {/* Job URL Import */}
+            <div className="bg-white rounded-lg border border-gray-200 p-3">
+              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Globe className="w-3 h-3" /> Import from URL
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  placeholder="Paste LinkedIn/Indeed job URL..."
+                  value={jobUrl}
+                  onChange={(e) => { setJobUrl(e.target.value); setUrlError(''); }}
+                  className="input-field text-xs flex-1"
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleFetchJobUrl(); }}
+                />
+                <button
+                  onClick={handleFetchJobUrl}
+                  disabled={fetchingUrl || !jobUrl.trim()}
+                  className="btn-secondary text-xs px-3 py-2 gap-1 shrink-0"
+                >
+                  {fetchingUrl ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />}
+                  {fetchingUrl ? 'Fetching...' : 'Fetch'}
+                </button>
+              </div>
+              {urlError && <p className="text-[10px] text-red-500 mt-1.5">{urlError}</p>}
+            </div>
+
+            <div className="relative flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
+              <span className="relative bg-gray-50 px-3 text-[9px] text-gray-400 uppercase tracking-wider">or paste manually</span>
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
               <input
                 type="text"

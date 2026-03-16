@@ -1,7 +1,9 @@
-/* ── ResumeForge — Builder Page v3 ─────────────────────────── */
+/* ── ResumeForge — Builder Page v4 ─────────────────────────── */
+/* Features: drag-drop reorder, mobile responsive, auto-save,
+   undo/redo, job URL import, lazy-loaded tabs, keyboard shortcuts */
 'use client';
 
-import { useRef, useState, useCallback, useEffect, useMemo, Suspense, lazy } from 'react';
+import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useResumeStore } from '@/store/useResumeStore';
@@ -11,8 +13,6 @@ import { exportToDOCX } from '@/lib/docx-exporter';
 import { SECTION_LABELS } from '@/types/resume';
 import type { SectionKey } from '@/types/resume';
 import ResumePreview from '@/components/resume/ResumePreview';
-import DesignPanel from '@/components/editor/DesignPanel';
-import ATSScorePanel from '@/components/editor/ATSScorePanel';
 import {
   PersonalInfoEditor, SummaryEditor, ExperienceEditor, EducationEditor,
   SkillsEditor, ProjectsEditor, CertificationsEditor, LanguagesEditor,
@@ -24,8 +24,32 @@ import {
   Award, Languages, Star, Heart, BookOpen, Users, Palette, BarChart3,
   ChevronDown, ZoomIn, ZoomOut, RotateCcw, History, FileType,
   Trash2, RotateCw, Clock, Plus, Check, X, FileUp, Eraser,
-  AlertTriangle, Keyboard, GripVertical,
+  AlertTriangle, Keyboard, GripVertical, Undo2, Redo2,
+  Eye, Loader2, PanelLeftClose, PanelLeft,
 } from 'lucide-react';
+
+/* ── Lazy-loaded heavy panels ────────────────────────────── */
+const DesignPanel = dynamic(() => import('@/components/editor/DesignPanel'), {
+  loading: () => <PanelSkeleton />,
+});
+const ATSScorePanel = dynamic(() => import('@/components/editor/ATSScorePanel'), {
+  loading: () => <PanelSkeleton />,
+});
+
+function PanelSkeleton() {
+  return (
+    <div className="space-y-4 p-1 animate-pulse">
+      <div className="h-4 w-24 bg-gray-200 rounded" />
+      <div className="grid grid-cols-2 gap-3">
+        {[1,2,3,4].map(i => <div key={i} className="h-28 bg-gray-100 rounded-xl" />)}
+      </div>
+      <div className="h-4 w-20 bg-gray-200 rounded" />
+      <div className="space-y-2">
+        {[1,2,3].map(i => <div key={i} className="h-10 bg-gray-100 rounded-lg" />)}
+      </div>
+    </div>
+  );
+}
 
 /* ── Section Icons ────────────────────────────────────────── */
 const SECTION_ICONS: Record<string, React.ReactNode> = {
@@ -60,6 +84,44 @@ const SECTION_EDITORS: Record<string, React.ComponentType> = {
 
 type Tab = 'content' | 'design' | 'ats' | 'history';
 
+/* ── Undo/Redo Hook ──────────────────────────────────────── */
+function useUndoRedo(maxHistory = 30) {
+  const [past, setPast] = useState<string[]>([]);
+  const [future, setFuture] = useState<string[]>([]);
+  const lastSnap = useRef('');
+
+  const snapshot = useCallback((dataJson: string) => {
+    if (dataJson === lastSnap.current) return;
+    setPast(p => [...p.slice(-(maxHistory - 1)), lastSnap.current]);
+    setFuture([]);
+    lastSnap.current = dataJson;
+  }, [maxHistory]);
+
+  const init = useCallback((dataJson: string) => {
+    lastSnap.current = dataJson;
+  }, []);
+
+  const undo = useCallback(() => {
+    if (past.length === 0) return null;
+    const prev = past[past.length - 1];
+    setPast(p => p.slice(0, -1));
+    setFuture(f => [lastSnap.current, ...f]);
+    lastSnap.current = prev;
+    return prev;
+  }, [past]);
+
+  const redo = useCallback(() => {
+    if (future.length === 0) return null;
+    const next = future[0];
+    setFuture(f => f.slice(1));
+    setPast(p => [...p, lastSnap.current]);
+    lastSnap.current = next;
+    return next;
+  }, [future]);
+
+  return { snapshot, init, undo, redo, canUndo: past.length > 0, canRedo: future.length > 0 };
+}
+
 /* ─────────────────────────────────────────────────────────── */
 export default function BuilderPage() {
   const store = useResumeStore();
@@ -68,7 +130,7 @@ export default function BuilderPage() {
     setActiveSection, setEditorTab, setPreviewScale,
     loadSampleData, exportData, importData, importResumeData,
     saveVersion, restoreVersion, deleteVersion, versions,
-    getCompletenessScore, resetData,
+    getCompletenessScore, resetData, reorderSections,
   } = store;
 
   const resumeRef = useRef<HTMLDivElement>(null);
@@ -83,9 +145,76 @@ export default function BuilderPage() {
   const [savingVersion, setSavingVersion] = useState(false);
   const [notification, setNotification] = useState('');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [sectionKey, setSectionKey] = useState(0); // For re-triggering animation
+  const [sectionKey, setSectionKey] = useState(0);
   const [showShortcuts, setShowShortcuts] = useState(false);
-  const [draggedSection, setDraggedSection] = useState<string | null>(null);
+
+  /* ── Mobile state ── */
+  const [mobileView, setMobileView] = useState<'editor' | 'preview'>('editor');
+  const [showMobilePanel, setShowMobilePanel] = useState(true);
+
+  /* ── Auto-save state ── */
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* ── Drag-drop state ── */
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
+  /* ── Undo/Redo ── */
+  const { snapshot, init, undo, redo, canUndo, canRedo } = useUndoRedo();
+
+  // Initialize undo history
+  useEffect(() => {
+    init(JSON.stringify(data));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Take undo snapshot on data changes (debounced)
+  const snapshotTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (snapshotTimer.current) clearTimeout(snapshotTimer.current);
+    snapshotTimer.current = setTimeout(() => {
+      snapshot(JSON.stringify(data));
+    }, 800);
+    return () => { if (snapshotTimer.current) clearTimeout(snapshotTimer.current); };
+  }, [data, snapshot]);
+
+  const handleUndo = useCallback(() => {
+    const prev = undo();
+    if (prev) {
+      try {
+        const parsed = JSON.parse(prev);
+        if (parsed && typeof parsed === 'object') {
+          importResumeData(parsed);
+          notify('Undone!');
+        }
+      } catch { /* ignore */ }
+    }
+  }, [undo, importResumeData]);
+
+  const handleRedo = useCallback(() => {
+    const next = redo();
+    if (next) {
+      try {
+        const parsed = JSON.parse(next);
+        if (parsed && typeof parsed === 'object') {
+          importResumeData(parsed);
+          notify('Redone!');
+        }
+      } catch { /* ignore */ }
+    }
+  }, [redo, importResumeData]);
+
+  /* ── Auto-save (debounced) ── */
+  useEffect(() => {
+    setAutoSaveStatus('unsaved');
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      setAutoSaveStatus('saving');
+      // Zustand persist handles the actual localStorage save automatically
+      setTimeout(() => setAutoSaveStatus('saved'), 400);
+    }, 1500);
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
+  }, [data, style]);
 
   const completeness = useMemo(() => getCompletenessScore(), [data]);
 
@@ -97,55 +226,37 @@ export default function BuilderPage() {
   /* ── Keyboard Shortcuts ── */
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl/Cmd + S to save version
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        saveVersion();
-        notify('Version saved!');
-      }
-      // Ctrl/Cmd + E to export PDF
-      if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
-        e.preventDefault();
-        handlePDF();
-      }
-      // Ctrl/Cmd + I to import
-      if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
-        e.preventDefault();
-        setShowImportZone(true);
-      }
-      // Escape to close modals
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (ctrl && e.key === 's') { e.preventDefault(); saveVersion(); notify('Version saved!'); }
+      if (ctrl && e.key === 'e') { e.preventDefault(); handlePDF(); }
+      if (ctrl && e.key === 'i') { e.preventDefault(); setShowImportZone(true); }
+      if (ctrl && e.key === 'z' && !e.shiftKey) { e.preventDefault(); handleUndo(); }
+      if (ctrl && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); handleRedo(); }
       if (e.key === 'Escape') {
-        setShowImportZone(false);
-        setShowClearConfirm(false);
-        setShowExportMenu(false);
-        setShowShortcuts(false);
+        setShowImportZone(false); setShowClearConfirm(false);
+        setShowExportMenu(false); setShowShortcuts(false);
       }
-      // Ctrl/Cmd + / to show shortcuts
-      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
-        e.preventDefault();
-        setShowShortcuts(s => !s);
-      }
-      // Number keys 1-4 to switch tabs
-      if (e.key >= '1' && e.key <= '4' && !e.ctrlKey && !e.metaKey && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+      if (ctrl && e.key === '/') { e.preventDefault(); setShowShortcuts(s => !s); }
+      if (e.key >= '1' && e.key <= '4' && !ctrl && !e.metaKey
+        && document.activeElement?.tagName !== 'INPUT'
+        && document.activeElement?.tagName !== 'TEXTAREA'
+        && document.activeElement?.tagName !== 'SELECT') {
         const tabs: Tab[] = ['content', 'design', 'ats', 'history'];
         setEditorTab(tabs[parseInt(e.key) - 1]);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [saveVersion]);
+  }, [saveVersion, handleUndo, handleRedo]);
 
-  /* ── Section change animation trigger ── */
-  useEffect(() => {
-    setSectionKey(k => k + 1);
-  }, [activeSection]);
+  /* ── Section change animation ── */
+  useEffect(() => { setSectionKey(k => k + 1); }, [activeSection]);
 
   /* ── Zoom ── */
   const zoomIn = useCallback(() => setPreviewScale(Math.min(previewScale + 0.1, 1.5)), [previewScale, setPreviewScale]);
   const zoomOut = useCallback(() => setPreviewScale(Math.max(previewScale - 0.1, 0.3)), [previewScale, setPreviewScale]);
   const zoomReset = useCallback(() => setPreviewScale(0.55), [setPreviewScale]);
 
-  /* ── Filename helper ── */
   const getFilename = useCallback(() =>
     `${data.personalInfo.firstName || 'resume'}_${data.personalInfo.lastName || 'export'}`.replace(/\s+/g, '_'),
     [data.personalInfo]);
@@ -154,7 +265,7 @@ export default function BuilderPage() {
   const handlePDF = useCallback(async () => {
     setExporting(true);
     try { await generatePDF(`${getFilename()}.pdf`); notify('PDF downloaded!'); }
-    catch (e) { console.error(e); }
+    catch (e) { console.error(e); notify('Export failed — try again'); }
     finally { setExporting(false); setShowExportMenu(false); }
   }, [getFilename]);
 
@@ -180,7 +291,7 @@ export default function BuilderPage() {
     finally { setExporting(false); setShowExportMenu(false); }
   }, [data, style, getFilename]);
 
-  /* ── Import handler (PDF/DOCX/TXT/JSON) ── */
+  /* ── Import handler ── */
   const handleImportFile = useCallback(async (file: File) => {
     if (!file) return;
     setImporting(true); setImportError(''); setImportSuccess('');
@@ -188,38 +299,28 @@ export default function BuilderPage() {
       if (file.name.endsWith('.json')) {
         const text = await file.text();
         importData(text);
-        setImportSuccess('JSON imported successfully! All fields have been populated.');
+        setImportSuccess('JSON imported successfully!');
         notify('JSON imported!');
       } else {
         const result = await parseResumeFile(file);
         if (result.success && result.data) {
-          // importResumeData now does full reset -> overlay
           importResumeData(result.data);
-
-          // Build success message with details
           const pi = result.data.personalInfo;
-          const expCount = result.data.experience?.length || 0;
-          const eduCount = result.data.education?.length || 0;
-          const skillCount = result.data.skills?.length || 0;
           const parts: string[] = [];
           if (pi?.firstName || pi?.lastName) parts.push(`Name: ${pi.firstName || ''} ${pi.lastName || ''}`);
           if (pi?.email) parts.push(`Email: ${pi.email}`);
+          const expCount = result.data.experience?.length || 0;
+          const eduCount = result.data.education?.length || 0;
           if (expCount > 0) parts.push(`${expCount} experience${expCount > 1 ? 's' : ''}`);
           if (eduCount > 0) parts.push(`${eduCount} education`);
-          if (skillCount > 0) parts.push(`${skillCount} skill categor${skillCount > 1 ? 'ies' : 'y'}`);
-
-          const detail = parts.length > 0
-            ? `Extracted: ${parts.join(' · ')}`
-            : 'File parsed but limited data was extracted. You can edit all sections manually.';
-
-          setImportSuccess(detail);
+          setImportSuccess(parts.length > 0 ? `Extracted: ${parts.join(' · ')}` : 'File parsed. Edit sections manually.');
           notify(`Resume parsed from ${file.name.split('.').pop()?.toUpperCase()}!`);
         } else {
-          setImportError(result.error || 'Could not parse file. Try PDF, DOCX, or TXT format.');
+          setImportError(result.error || 'Could not parse file.');
         }
       }
     } catch (e: any) {
-      setImportError(e.message || 'Import failed. Please try a different file.');
+      setImportError(e.message || 'Import failed.');
     } finally { setImporting(false); }
   }, [importData, importResumeData]);
 
@@ -240,23 +341,17 @@ export default function BuilderPage() {
     input.click();
   }, [handleImportFile]);
 
-  /* ── Clear / Reset ── */
   const handleClearAll = useCallback(() => {
-    resetData();
-    setShowClearConfirm(false);
-    notify('All data cleared — start fresh!');
+    resetData(); setShowClearConfirm(false); notify('All data cleared!');
   }, [resetData]);
 
-  /* ── Version handlers ── */
   const handleSaveVersion = useCallback(() => {
     saveVersion(versionName || undefined);
-    setVersionName(''); setSavingVersion(false);
-    notify('Version saved!');
+    setVersionName(''); setSavingVersion(false); notify('Version saved!');
   }, [saveVersion, versionName]);
 
   const handleRestoreVersion = useCallback((id: string) => {
-    restoreVersion(id);
-    notify('Version restored!');
+    restoreVersion(id); notify('Version restored!');
   }, [restoreVersion]);
 
   /* ── Close export on outside click ── */
@@ -267,15 +362,32 @@ export default function BuilderPage() {
     return () => { clearTimeout(timer); document.removeEventListener('click', h); };
   }, [showExportMenu]);
 
-  const sectionItems = [
-    { key: 'personalInfo', label: 'Personal Info' },
+  /* ── Section list (with drag-drop support) ── */
+  const sectionItems = useMemo(() => [
+    { key: 'personalInfo', label: 'Personal Info', isDraggable: false },
     ...style.sectionOrder
       .filter(s => !style.hiddenSections.includes(s))
-      .map(s => ({ key: s, label: SECTION_LABELS[s] })),
-  ];
+      .map(s => ({ key: s, label: SECTION_LABELS[s], isDraggable: true })),
+  ], [style.sectionOrder, style.hiddenSections]);
 
   const EditorComponent = SECTION_EDITORS[activeSection] || PersonalInfoEditor;
   const completenessColor = completeness >= 80 ? '#10b981' : completeness >= 60 ? '#3b82f6' : '#f59e0b';
+
+  /* ── Drag-drop handlers for section sidebar ── */
+  const handleDragStart = useCallback((idx: number) => { setDragIdx(idx); }, []);
+  const handleDragOver = useCallback((e: React.DragEvent, idx: number) => { e.preventDefault(); setDragOverIdx(idx); }, []);
+  const handleDrop = useCallback((targetIdx: number) => {
+    if (dragIdx !== null && dragIdx !== targetIdx) {
+      const fromSection = dragIdx - 1;
+      const toSection = targetIdx - 1;
+      if (fromSection >= 0 && toSection >= 0) {
+        reorderSections(fromSection, toSection);
+        notify('Sections reordered!');
+      }
+    }
+    setDragIdx(null); setDragOverIdx(null);
+  }, [dragIdx, reorderSections]);
+  const handleDragEnd = useCallback(() => { setDragIdx(null); setDragOverIdx(null); }, []);
 
   /* ── Section completion helper ── */
   const sectionHasContent = (key: string): boolean => {
@@ -307,7 +419,7 @@ export default function BuilderPage() {
         </div>
       )}
 
-      {/* ── Clear Confirmation Dialog ── */}
+      {/* ── Clear Confirmation ── */}
       {showClearConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 animate-bounce-in">
@@ -317,7 +429,7 @@ export default function BuilderPage() {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-gray-900">Clear all data?</h3>
-                <p className="text-xs text-gray-500 mt-0.5">This will remove all resume content, style settings, and version history. This cannot be undone.</p>
+                <p className="text-xs text-gray-500 mt-0.5">This cannot be undone.</p>
               </div>
             </div>
             <div className="flex gap-2 mt-5">
@@ -337,32 +449,29 @@ export default function BuilderPage() {
                 <Keyboard className="w-5 h-5 text-blue-600" />
                 <h3 className="text-sm font-bold text-gray-900">Keyboard Shortcuts</h3>
               </div>
-              <button onClick={() => setShowShortcuts(false)} className="text-gray-400 hover:text-gray-700">
-                <X className="w-4 h-4" />
-              </button>
+              <button onClick={() => setShowShortcuts(false)} className="text-gray-400 hover:text-gray-700"><X className="w-4 h-4" /></button>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {[
+                { keys: ['Ctrl', 'Z'], desc: 'Undo' },
+                { keys: ['Ctrl', 'Shift', 'Z'], desc: 'Redo' },
                 { keys: ['Ctrl', 'S'], desc: 'Save version' },
                 { keys: ['Ctrl', 'E'], desc: 'Export as PDF' },
                 { keys: ['Ctrl', 'I'], desc: 'Import resume' },
                 { keys: ['Ctrl', '/'], desc: 'Show shortcuts' },
-                { keys: ['1-4'], desc: 'Switch tabs (Content/Design/ATS/History)' },
+                { keys: ['1-4'], desc: 'Switch tabs' },
                 { keys: ['Esc'], desc: 'Close modal' },
               ].map((shortcut, i) => (
                 <div key={i} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50">
                   <span className="text-xs text-gray-600">{shortcut.desc}</span>
                   <div className="flex items-center gap-1">
                     {shortcut.keys.map((k, j) => (
-                      <kbd key={j} className="px-2 py-0.5 text-[10px] font-mono bg-gray-100 border border-gray-200 rounded text-gray-700">
-                        {k}
-                      </kbd>
+                      <kbd key={j} className="px-2 py-0.5 text-[10px] font-mono bg-gray-100 border border-gray-200 rounded text-gray-700">{k}</kbd>
                     ))}
                   </div>
                 </div>
               ))}
             </div>
-            <p className="text-[10px] text-gray-400 mt-4 text-center">Press <kbd className="px-1 py-0.5 text-[9px] font-mono bg-gray-100 rounded">Ctrl</kbd> + <kbd className="px-1 py-0.5 text-[9px] font-mono bg-gray-100 rounded">/</kbd> anytime to toggle this</p>
           </div>
         </div>
       )}
@@ -370,11 +479,11 @@ export default function BuilderPage() {
       {/* ── Import Modal ── */}
       {showImportZone && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg mx-4 animate-bounce-in">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-full max-w-lg mx-4 animate-bounce-in">
             <div className="flex justify-between items-center mb-5">
               <div>
                 <h2 className="text-lg font-bold text-gray-900">Import Resume</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Upload a resume file to populate all fields automatically</p>
+                <p className="text-xs text-gray-400 mt-0.5">Upload a file to populate all fields</p>
               </div>
               <button onClick={() => { setShowImportZone(false); setImportError(''); setImportSuccess(''); }} className="text-gray-400 hover:text-gray-700 p-1">
                 <X className="w-5 h-5" />
@@ -386,17 +495,14 @@ export default function BuilderPage() {
               onDragLeave={() => setDragging(false)}
               onDrop={handleDropZone}
               onClick={openFilePicker}
-              className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all ${
-                dragging
-                  ? 'border-blue-500 bg-blue-50 scale-[1.02]'
-                  : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/30'
+              className={`border-2 border-dashed rounded-2xl p-8 sm:p-10 text-center cursor-pointer transition-all ${
+                dragging ? 'border-blue-500 bg-blue-50 scale-[1.02]' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/30'
               }`}
             >
               {importing ? (
                 <div className="flex flex-col items-center gap-3">
-                  <RotateCw className="w-10 h-10 text-blue-500 animate-spin" />
+                  <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
                   <p className="text-sm font-medium text-gray-600">Parsing your resume...</p>
-                  <p className="text-xs text-gray-400">Extracting personal info, experience, education, skills...</p>
                 </div>
               ) : (
                 <>
@@ -404,46 +510,38 @@ export default function BuilderPage() {
                     <FileUp className="w-8 h-8 text-blue-600" />
                   </div>
                   <p className="text-sm font-bold text-gray-700">Drop your resume here, or click to browse</p>
-                  <p className="text-xs text-gray-400 mt-2">We'll extract all your resume content automatically</p>
+                  <p className="text-xs text-gray-400 mt-2">We&apos;ll extract all your content automatically</p>
                 </>
               )}
             </div>
 
-            {/* Format badges */}
             <div className="mt-4 flex items-center justify-center gap-2">
               {['PDF', 'DOCX', 'TXT', 'JSON'].map((fmt) => (
                 <span key={fmt} className="px-3 py-1.5 rounded-lg bg-gray-100 text-[10px] font-bold text-gray-600">{fmt}</span>
               ))}
             </div>
 
-            {/* Errors */}
             {importError && (
               <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                <div>{importError}</div>
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /><div>{importError}</div>
               </div>
             )}
-
-            {/* Success with details */}
             {importSuccess && (
               <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700 flex items-start gap-2">
                 <Check className="w-4 h-4 shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold mb-1">Import successful!</p>
                   <p className="text-xs text-green-600">{importSuccess}</p>
-                  <p className="text-xs text-green-500 mt-1">You can now edit all sections in the Content tab.</p>
                 </div>
               </div>
             )}
 
-            {/* Instructions */}
             <div className="mt-4 p-3 bg-gray-50 rounded-xl">
               <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">How import works</p>
               <ul className="text-[11px] text-gray-500 space-y-1">
-                <li>• <strong>PDF/DOCX/TXT</strong>: We extract text and use smart parsing to detect sections</li>
-                <li>• <strong>JSON</strong>: Directly loads previously exported ResumeForge data</li>
-                <li>• All imported data is <strong>fully editable</strong> across all sections</li>
-                <li>• Previous data is <strong>cleared</strong> when you import a new file</li>
+                <li>• <strong>PDF/DOCX/TXT</strong>: Smart parsing to detect sections</li>
+                <li>• <strong>JSON</strong>: Loads previously exported data</li>
+                <li>• All imported data is <strong>fully editable</strong></li>
               </ul>
             </div>
           </div>
@@ -451,79 +549,85 @@ export default function BuilderPage() {
       )}
 
       {/* ── TOP BAR ── */}
-      <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 shrink-0 z-20">
-        <div className="flex items-center gap-3">
+      <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-3 sm:px-4 shrink-0 z-20">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Mobile panel toggle */}
+          <button onClick={() => setShowMobilePanel(!showMobilePanel)} className="md:hidden btn-ghost p-1.5">
+            {showMobilePanel ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeft className="w-4 h-4" />}
+          </button>
+
           <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
             <ArrowLeft className="w-4 h-4" />
             <span className="text-sm font-medium hidden sm:inline">Back</span>
           </Link>
-          <div className="h-5 w-px bg-gray-200" />
-          <h1 className="text-sm font-bold text-gray-900">ResumeForge</h1>
+          <div className="h-5 w-px bg-gray-200 hidden sm:block" />
+          <h1 className="text-sm font-bold text-gray-900 hidden sm:block">ResumeForge</h1>
 
-          {/* Completeness indicator */}
-          <div className="hidden md:flex items-center gap-2 ml-2">
+          {/* Completeness */}
+          <div className="hidden lg:flex items-center gap-2 ml-2">
             <div className="w-32 h-2 rounded-full bg-gray-100 overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{ width: `${completeness}%`, backgroundColor: completenessColor }}
-              />
+              <div className="h-full rounded-full transition-all duration-700" style={{ width: `${completeness}%`, backgroundColor: completenessColor }} />
             </div>
-            <span className="text-xs font-bold tabular-nums" style={{ color: completenessColor }}>
-              {completeness}%
-            </span>
+            <span className="text-xs font-bold tabular-nums" style={{ color: completenessColor }}>{completeness}%</span>
+          </div>
+
+          {/* Auto-save indicator */}
+          <div className="hidden sm:flex items-center gap-1 ml-2">
+            {autoSaveStatus === 'saved' && <span className="text-[10px] text-green-600 flex items-center gap-1"><span className="w-1.5 h-1.5 bg-green-500 rounded-full" /> Saved</span>}
+            {autoSaveStatus === 'saving' && <span className="text-[10px] text-blue-600 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Saving...</span>}
+            {autoSaveStatus === 'unsaved' && <span className="text-[10px] text-amber-600 flex items-center gap-1"><span className="w-1.5 h-1.5 bg-amber-500 rounded-full" /> Unsaved</span>}
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          {/* Zoom */}
-          <div className="hidden md:flex items-center gap-0.5 mr-1.5">
+        <div className="flex items-center gap-1 sm:gap-1.5">
+          {/* Undo / Redo */}
+          <button onClick={handleUndo} disabled={!canUndo} className="btn-ghost p-1.5" title="Undo (Ctrl+Z)">
+            <Undo2 className={`w-4 h-4 ${canUndo ? '' : 'opacity-30'}`} />
+          </button>
+          <button onClick={handleRedo} disabled={!canRedo} className="btn-ghost p-1.5" title="Redo (Ctrl+Shift+Z)">
+            <Redo2 className={`w-4 h-4 ${canRedo ? '' : 'opacity-30'}`} />
+          </button>
+
+          <div className="h-5 w-px bg-gray-200 hidden sm:block" />
+
+          {/* Zoom (desktop) */}
+          <div className="hidden lg:flex items-center gap-0.5 mr-1">
             <button onClick={zoomOut} className="btn-ghost p-1.5"><ZoomOut className="w-4 h-4" /></button>
             <span className="text-xs text-gray-500 w-10 text-center tabular-nums">{Math.round(previewScale * 100)}%</span>
             <button onClick={zoomIn} className="btn-ghost p-1.5"><ZoomIn className="w-4 h-4" /></button>
             <button onClick={zoomReset} className="btn-ghost p-1.5"><RotateCcw className="w-3.5 h-3.5" /></button>
           </div>
 
-          {/* Clear button */}
-          <button
-            onClick={() => setShowClearConfirm(true)}
-            className="btn-ghost text-xs gap-1 text-red-500 hover:text-red-600 hover:bg-red-50"
-            title="Clear all data"
-          >
-            <Eraser className="w-3.5 h-3.5" /> Clear
+          <button onClick={() => setShowClearConfirm(true)} className="btn-ghost text-xs gap-1 text-red-500 hover:text-red-600 hover:bg-red-50 hidden sm:inline-flex" title="Clear all data">
+            <Eraser className="w-3.5 h-3.5" /> <span className="hidden lg:inline">Clear</span>
           </button>
 
-          <button onClick={loadSampleData} className="btn-ghost text-xs gap-1.5">
-            <Sparkles className="w-3.5 h-3.5" /> Sample
+          <button onClick={loadSampleData} className="btn-ghost text-xs gap-1.5 hidden sm:inline-flex">
+            <Sparkles className="w-3.5 h-3.5" /> <span className="hidden lg:inline">Sample</span>
           </button>
 
           <button onClick={() => setShowImportZone(true)} className="btn-ghost text-xs gap-1.5">
-            <Upload className="w-3.5 h-3.5" /> Import
+            <Upload className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Import</span>
           </button>
 
-          <button
-            onClick={() => setShowShortcuts(true)}
-            className="btn-ghost p-1.5 hidden md:flex"
-            title="Keyboard shortcuts (Ctrl+/)"
-          >
+          <button onClick={() => setShowShortcuts(true)} className="btn-ghost p-1.5 hidden lg:flex" title="Keyboard shortcuts (Ctrl+/)">
             <Keyboard className="w-4 h-4" />
+          </button>
+
+          {/* Mobile preview toggle */}
+          <button onClick={() => setMobileView(mobileView === 'editor' ? 'preview' : 'editor')} className="md:hidden btn-ghost p-1.5" title="Toggle preview">
+            <Eye className="w-4 h-4" />
           </button>
 
           {/* Export dropdown */}
           <div className="relative">
-            <button
-              onClick={(e) => { e.stopPropagation(); setShowExportMenu(!showExportMenu); }}
-              disabled={exporting}
-              className="btn-primary text-xs gap-1.5"
-            >
+            <button onClick={(e) => { e.stopPropagation(); setShowExportMenu(!showExportMenu); }} disabled={exporting} className="btn-primary text-xs gap-1.5">
               <Download className="w-3.5 h-3.5" />
-              {exporting ? 'Exporting...' : 'Export'}
+              <span className="hidden sm:inline">{exporting ? 'Exporting...' : 'Export'}</span>
               <ChevronDown className="w-3 h-3" />
             </button>
             {showExportMenu && (
-              <div
-                className="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl shadow-xl border border-gray-200 py-1 z-50 animate-fade-in"
-                onClick={(e) => e.stopPropagation()}
-              >
+              <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl shadow-xl border border-gray-200 py-1 z-50 animate-fade-in" onClick={(e) => e.stopPropagation()}>
                 <button onClick={handlePDF} className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
                   <Download className="w-4 h-4 text-red-500" /> Download PDF
                 </button>
@@ -546,8 +650,8 @@ export default function BuilderPage() {
       {/* ── MAIN ── */}
       <div className="flex-1 flex overflow-hidden">
 
-        {/* ── LEFT PANEL ── */}
-        <div className="w-[420px] bg-white border-r border-gray-200 flex flex-col shrink-0">
+        {/* ── LEFT PANEL (responsive) ── */}
+        <div className={`${showMobilePanel ? 'flex' : 'hidden'} md:flex ${mobileView === 'preview' ? 'hidden md:flex' : ''} w-full md:w-[420px] bg-white border-r border-gray-200 flex-col shrink-0`}>
           {/* Tab bar */}
           <div className="flex border-b border-gray-200 shrink-0">
             {([
@@ -559,16 +663,12 @@ export default function BuilderPage() {
               <button
                 key={tab.key}
                 onClick={() => setEditorTab(tab.key)}
-                className={`flex-1 flex items-center justify-center gap-1 py-3 text-[11px] font-medium transition-all ${
-                  editorTab === tab.key ? 'tab-active' : 'tab-inactive'
-                }`}
+                className={`flex-1 flex items-center justify-center gap-1 py-3 text-[11px] font-medium transition-all ${editorTab === tab.key ? 'tab-active' : 'tab-inactive'}`}
               >
                 {tab.icon}
                 <span className="hidden sm:inline">{tab.label}</span>
                 {tab.key === 'history' && versions.length > 0 && (
-                  <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[8px] font-bold flex items-center justify-center ml-0.5">
-                    {versions.length}
-                  </span>
+                  <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[8px] font-bold flex items-center justify-center ml-0.5">{versions.length}</span>
                 )}
               </button>
             ))}
@@ -580,27 +680,36 @@ export default function BuilderPage() {
             {/* CONTENT TAB */}
             {editorTab === 'content' && (
               <div className="flex h-full">
-                <div className="w-12 sm:w-14 bg-gray-50 border-r border-gray-100 shrink-0 py-2 flex flex-col gap-0.5">
-                  {sectionItems.map(({ key, label }) => (
+                {/* Section sidebar with drag-drop */}
+                <div className="w-12 sm:w-14 bg-gray-50 border-r border-gray-100 shrink-0 py-2 flex flex-col gap-0.5 overflow-y-auto scrollbar-hide">
+                  {sectionItems.map(({ key, label, isDraggable }, idx) => (
                     <button
                       key={key}
                       onClick={() => setActiveSection(key as SectionKey | 'personalInfo')}
-                      title={label}
-                      className={`relative flex flex-col items-center gap-0.5 py-2 px-1 rounded-r-lg text-[8px] leading-tight transition-all ${
+                      title={`${label}${isDraggable ? ' (drag to reorder)' : ''}`}
+                      draggable={isDraggable}
+                      onDragStart={isDraggable ? () => handleDragStart(idx) : undefined}
+                      onDragOver={isDraggable ? (e) => handleDragOver(e, idx) : undefined}
+                      onDrop={isDraggable ? () => handleDrop(idx) : undefined}
+                      onDragEnd={handleDragEnd}
+                      className={`relative flex flex-col items-center gap-0.5 py-2 px-1 rounded-r-lg text-[8px] leading-tight transition-all group ${
+                        dragOverIdx === idx ? 'bg-blue-100 border-l-2 border-blue-400' :
                         activeSection === key
                           ? 'bg-blue-50 text-blue-600 border-l-2 border-blue-600'
                           : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 border-l-2 border-transparent'
-                      }`}
+                      } ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
                     >
+                      {isDraggable && (
+                        <GripVertical className="w-2.5 h-2.5 text-gray-300 absolute -top-0.5 right-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      )}
                       {SECTION_ICONS[key]}
-                      {/* Green dot if section has content */}
                       {sectionHasContent(key) && (
                         <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-emerald-400" />
                       )}
                     </button>
                   ))}
                 </div>
-                <div key={sectionKey} className="flex-1 p-4 section-enter overflow-y-auto">
+                <div key={sectionKey} className="flex-1 p-3 sm:p-4 section-enter overflow-y-auto">
                   <h2 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
                     {SECTION_ICONS[activeSection]}
                     {activeSection === 'personalInfo' ? 'Personal Info' : SECTION_LABELS[activeSection as SectionKey]}
@@ -610,12 +719,12 @@ export default function BuilderPage() {
               </div>
             )}
 
-            {/* DESIGN TAB */}
+            {/* DESIGN TAB (lazy-loaded) */}
             {editorTab === 'design' && (
               <div className="p-4 animate-fade-in"><DesignPanel /></div>
             )}
 
-            {/* ATS TAB */}
+            {/* ATS TAB (lazy-loaded) */}
             {editorTab === 'ats' && (
               <div className="p-4 animate-fade-in"><ATSScorePanel /></div>
             )}
@@ -625,7 +734,7 @@ export default function BuilderPage() {
               <div className="p-4 animate-fade-in space-y-4">
                 <div>
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Version History</h3>
-                  <p className="text-[10px] text-gray-400 mb-4">Save snapshots to compare or revert.</p>
+                  <p className="text-[10px] text-gray-400 mb-4">Save snapshots to compare or revert. Auto-save keeps your work safe.</p>
 
                   {savingVersion ? (
                     <div className="flex items-center gap-2 mb-4">
@@ -654,7 +763,7 @@ export default function BuilderPage() {
                     <div className="text-center py-8">
                       <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                       <p className="text-xs text-gray-400">No saved versions yet.</p>
-                      <p className="text-[10px] text-gray-300 mt-1">Save a version before making changes.</p>
+                      <p className="text-[10px] text-gray-300 mt-1">Use Ctrl+S or the button above.</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -665,17 +774,11 @@ export default function BuilderPage() {
                             <p className="text-[10px] text-gray-400">
                               {new Date(v.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </p>
-                            {v.atsScore !== undefined && (
-                              <p className="text-[10px] font-bold text-blue-600">ATS: {v.atsScore}</p>
-                            )}
+                            {v.atsScore !== undefined && <p className="text-[10px] font-bold text-blue-600">ATS: {v.atsScore}</p>}
                           </div>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => handleRestoreVersion(v.id)} title="Restore" className="p-1.5 rounded-lg hover:bg-blue-100 text-blue-600">
-                              <RotateCw className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={() => deleteVersion(v.id)} title="Delete" className="p-1.5 rounded-lg hover:bg-red-100 text-red-500">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <button onClick={() => handleRestoreVersion(v.id)} title="Restore" className="p-1.5 rounded-lg hover:bg-blue-100 text-blue-600"><RotateCw className="w-3.5 h-3.5" /></button>
+                            <button onClick={() => deleteVersion(v.id)} title="Delete" className="p-1.5 rounded-lg hover:bg-red-100 text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
                           </div>
                         </div>
                       ))}
@@ -688,14 +791,9 @@ export default function BuilderPage() {
         </div>
 
         {/* ── RIGHT PANEL: Preview ── */}
-        <div className="flex-1 overflow-auto bg-gray-100 p-6 flex justify-center">
+        <div className={`flex-1 overflow-auto bg-gray-100 p-4 sm:p-6 flex justify-center ${mobileView === 'editor' ? 'hidden md:flex' : 'flex'}`}>
           <div className="animate-fade-in">
-            <ResumePreview
-              ref={resumeRef}
-              data={data}
-              style={style}
-              scale={previewScale}
-            />
+            <ResumePreview ref={resumeRef} data={data} style={style} scale={previewScale} />
           </div>
         </div>
       </div>
