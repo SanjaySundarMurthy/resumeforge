@@ -15,14 +15,17 @@ interface Props {
 }
 
 function TemplateMiniPreviewInner({ templateId, primaryColor, isActive, onClick, name, desc }: Props) {
-  const data = useResumeStore((s) => s.data);
+  const firstName = useResumeStore((s) => s.data.personalInfo.firstName);
+  const lastName = useResumeStore((s) => s.data.personalInfo.lastName);
+  const title = useResumeStore((s) => s.data.personalInfo.title) || 'Professional Title';
+  const expCount = useResumeStore((s) => s.data.experience.length);
+  const eduCount = useResumeStore((s) => s.data.education.length);
+  const skillsCount = useResumeStore((s) => s.data.skills.length);
+  const summaryLen = useResumeStore((s) => s.data.summary.length);
   const c = primaryColor;
   const [hovered, setHovered] = useState(false);
 
-  // Extract key data for live preview
-  const fullName = `${data.personalInfo.firstName || 'Your'} ${data.personalInfo.lastName || 'Name'}`;
-  const title = data.personalInfo.title || 'Professional Title';
-  const hasContent = data.experience.length > 0 || data.summary.length > 20;
+  const fullName = `${firstName || 'Your'} ${lastName || 'Name'}`;
 
   return (
     <button
@@ -44,11 +47,11 @@ function TemplateMiniPreviewInner({ templateId, primaryColor, isActive, onClick,
             animate={hovered}
             name={fullName}
             title={title}
-            hasExp={data.experience.length > 0}
-            hasEdu={data.education.length > 0}
-            hasSkills={data.skills.length > 0}
-            hasSummary={data.summary.length > 20}
-            expCount={data.experience.length}
+            hasExp={expCount > 0}
+            hasEdu={eduCount > 0}
+            hasSkills={skillsCount > 0}
+            hasSummary={summaryLen > 20}
+            expCount={expCount}
           />
         </div>
         {/* Shimmer overlay on hover */}

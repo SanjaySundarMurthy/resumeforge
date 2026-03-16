@@ -29,6 +29,8 @@ import {
   Eye, Loader2, PanelLeftClose, PanelLeft, Moon, Sun,
 } from 'lucide-react';
 import { useDarkMode } from '@/hooks/useDarkMode';
+import { useAutoSave } from '@/hooks/useAutoSave';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 /* ── Lazy-loaded heavy panels ────────────────────────────── */
 const DesignPanel = dynamic(() => import('@/components/editor/DesignPanel'), {
@@ -126,14 +128,26 @@ function useUndoRedo(maxHistory = 30) {
 
 /* ─────────────────────────────────────────────────────────── */
 export default function BuilderPage() {
-  const store = useResumeStore();
-  const {
-    data, style, activeSection, editorTab, previewScale,
-    setActiveSection, setEditorTab, setPreviewScale,
-    loadSampleData, exportData, importData, importResumeData,
-    saveVersion, restoreVersion, deleteVersion, versions,
-    getCompletenessScore, resetData, reorderSections,
-  } = store;
+  /* Granular Zustand selectors — prevent full re-render on every keystroke */
+  const data = useResumeStore((s) => s.data);
+  const style = useResumeStore((s) => s.style);
+  const activeSection = useResumeStore((s) => s.activeSection);
+  const editorTab = useResumeStore((s) => s.editorTab);
+  const previewScale = useResumeStore((s) => s.previewScale);
+  const versions = useResumeStore((s) => s.versions);
+  const setActiveSection = useResumeStore((s) => s.setActiveSection);
+  const setEditorTab = useResumeStore((s) => s.setEditorTab);
+  const setPreviewScale = useResumeStore((s) => s.setPreviewScale);
+  const loadSampleData = useResumeStore((s) => s.loadSampleData);
+  const exportData = useResumeStore((s) => s.exportData);
+  const importData = useResumeStore((s) => s.importData);
+  const importResumeData = useResumeStore((s) => s.importResumeData);
+  const saveVersion = useResumeStore((s) => s.saveVersion);
+  const restoreVersion = useResumeStore((s) => s.restoreVersion);
+  const deleteVersion = useResumeStore((s) => s.deleteVersion);
+  const getCompletenessScore = useResumeStore((s) => s.getCompletenessScore);
+  const resetData = useResumeStore((s) => s.resetData);
+  const reorderSections = useResumeStore((s) => s.reorderSections);
 
   const resumeRef = useRef<HTMLDivElement>(null);
   const { isDark, toggle: toggleDarkMode } = useDarkMode();
@@ -156,8 +170,7 @@ export default function BuilderPage() {
   const [showMobilePanel, setShowMobilePanel] = useState(true);
 
   /* ── Auto-save state ── */
-  const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
-  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSaveStatus = useAutoSave([data, style]);
 
   /* ── Drag-drop state ── */
   const [dragIdx, setDragIdx] = useState<number | null>(null);
@@ -190,7 +203,7 @@ export default function BuilderPage() {
           importResumeData(parsed);
           notify('Undone!');
         }
-      } catch { /* ignore */ }
+      } catch (e) { console.warn('Undo failed:', e); }
     }
   }, [undo, importResumeData]);
 
@@ -203,21 +216,9 @@ export default function BuilderPage() {
           importResumeData(parsed);
           notify('Redone!');
         }
-      } catch { /* ignore */ }
+      } catch (e) { console.warn('Redo failed:', e); }
     }
   }, [redo, importResumeData]);
-
-  /* ── Auto-save (debounced) ── */
-  useEffect(() => {
-    setAutoSaveStatus('unsaved');
-    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    autoSaveTimer.current = setTimeout(() => {
-      setAutoSaveStatus('saving');
-      // Zustand persist handles the actual localStorage save automatically
-      setTimeout(() => setAutoSaveStatus('saved'), 400);
-    }, 1500);
-    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
-  }, [data, style]);
 
   const completeness = useMemo(() => getCompletenessScore(), [data, getCompletenessScore]);
 
@@ -249,7 +250,7 @@ export default function BuilderPage() {
   const handlePNG = useCallback(async () => {
     setExporting(true);
     try { await generatePNG(`${getFilename()}.png`); notify('PNG downloaded!'); }
-    catch (e) { console.error(e); }
+    catch (e) { console.error(e); notify('PNG export failed — try again'); }
     finally { setExporting(false); setShowExportMenu(false); }
   }, [getFilename]);
 
@@ -264,13 +265,18 @@ export default function BuilderPage() {
   const handleExportDOCX = useCallback(async () => {
     setExporting(true);
     try { await exportToDOCX(data, style, `${getFilename()}.docx`); notify('DOCX downloaded!'); }
-    catch (e) { console.error(e); }
+    catch (e) { console.error(e); notify('DOCX export failed — try again'); }
     finally { setExporting(false); setShowExportMenu(false); }
   }, [data, style, getFilename]);
 
   /* ── Import handler ── */
   const handleImportFile = useCallback(async (file: File) => {
     if (!file) return;
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+    if (file.size > MAX_FILE_SIZE) {
+      setImportError(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum size is 10 MB.`);
+      return;
+    }
     setImporting(true); setImportError(''); setImportSuccess('');
     try {
       if (file.name.endsWith('.json')) {
@@ -331,32 +337,17 @@ export default function BuilderPage() {
     restoreVersion(id); notify('Version restored!');
   }, [restoreVersion]);
 
-  /* ── Keyboard Shortcuts ── */
-  /* Placed here so all handlers (handlePDF etc.) are already defined in this scope */
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const ctrl = e.ctrlKey || e.metaKey;
-      if (ctrl && e.key === 's') { e.preventDefault(); saveVersion(); notify('Version saved!'); }
-      if (ctrl && e.key === 'e') { e.preventDefault(); handlePDF(); }
-      if (ctrl && e.key === 'i') { e.preventDefault(); setShowImportZone(true); }
-      if (ctrl && e.key === 'z' && !e.shiftKey) { e.preventDefault(); handleUndo(); }
-      if (ctrl && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); handleRedo(); }
-      if (e.key === 'Escape') {
-        setShowImportZone(false); setShowClearConfirm(false);
-        setShowExportMenu(false); setShowShortcuts(false);
-      }
-      if (ctrl && e.key === '/') { e.preventDefault(); setShowShortcuts(s => !s); }
-      if (e.key >= '1' && e.key <= '4' && !ctrl && !e.metaKey
-        && document.activeElement?.tagName !== 'INPUT'
-        && document.activeElement?.tagName !== 'TEXTAREA'
-        && document.activeElement?.tagName !== 'SELECT') {
-        const tabs: Tab[] = ['content', 'design', 'ats', 'history'];
-        setEditorTab(tabs[parseInt(e.key) - 1]);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [saveVersion, handleUndo, handleRedo, handlePDF, notify]);
+  /* ── Keyboard Shortcuts (extracted) ── */
+  useKeyboardShortcuts({
+    onSave: () => { saveVersion(); notify('Version saved!'); },
+    onExport: handlePDF,
+    onImport: () => setShowImportZone(true),
+    onUndo: handleUndo,
+    onRedo: handleRedo,
+    onEscape: () => { setShowImportZone(false); setShowClearConfirm(false); setShowExportMenu(false); setShowShortcuts(false); },
+    onToggleShortcuts: () => setShowShortcuts(s => !s),
+    onTabSwitch: (i) => { const tabs: Tab[] = ['content', 'design', 'ats', 'history']; setEditorTab(tabs[i]); },
+  });
 
   /* ── Close export on outside click ── */
   useEffect(() => {
@@ -635,7 +626,7 @@ export default function BuilderPage() {
 
           {/* Export dropdown */}
           <div className="relative">
-            <button onClick={(e) => { e.stopPropagation(); setShowExportMenu(!showExportMenu); }} disabled={exporting} className="btn-primary text-xs gap-1.5">
+            <button onClick={(e) => { e.stopPropagation(); setShowExportMenu(!showExportMenu); }} disabled={exporting} className="btn-primary text-xs gap-1.5" aria-haspopup="true" aria-expanded={showExportMenu}>
               <Download className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">{exporting ? 'Exporting...' : 'Export'}</span>
               <ChevronDown className="w-3 h-3" />
@@ -696,7 +687,7 @@ export default function BuilderPage() {
 
             {/* CONTENT TAB */}
             {editorTab === 'content' && (
-              <div className="flex h-full">
+              <div id="tabpanel-content" role="tabpanel" aria-labelledby="tab-content" className="flex h-full">
                 {/* Section sidebar with drag-drop */}
                 <div className="w-12 sm:w-14 bg-gray-50 border-r border-gray-100 shrink-0 py-2 flex flex-col gap-0.5 overflow-y-auto scrollbar-hide">
                   {sectionItems.map(({ key, label, isDraggable }, idx) => (
@@ -738,17 +729,17 @@ export default function BuilderPage() {
 
             {/* DESIGN TAB (lazy-loaded) */}
             {editorTab === 'design' && (
-              <div className="p-4 animate-fade-in"><DesignPanel /></div>
+              <div id="tabpanel-design" role="tabpanel" aria-labelledby="tab-design" className="p-4 animate-fade-in"><DesignPanel /></div>
             )}
 
             {/* ATS TAB (lazy-loaded) */}
             {editorTab === 'ats' && (
-              <div className="p-4 animate-fade-in"><ATSScorePanel /></div>
+              <div id="tabpanel-ats" role="tabpanel" aria-labelledby="tab-ats" className="p-4 animate-fade-in"><ATSScorePanel /></div>
             )}
 
             {/* HISTORY TAB */}
             {editorTab === 'history' && (
-              <div className="p-4 animate-fade-in space-y-4">
+              <div id="tabpanel-history" role="tabpanel" aria-labelledby="tab-history" className="p-4 animate-fade-in space-y-4">
                 <div>
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Version History</h3>
                   <p className="text-[10px] text-gray-400 mb-4">Save snapshots to compare or revert. Auto-save keeps your work safe.</p>

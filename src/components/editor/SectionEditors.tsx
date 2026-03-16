@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { useResumeStore } from '@/store/useResumeStore';
 import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp, ExternalLink,
@@ -11,13 +11,13 @@ import {
 
 /* ── Shared Components ───────────────────────────────────── */
 
-function Input({ label, value, onChange, placeholder, type = 'text', pattern, title: inputTitle }: {
-  label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string; pattern?: string; title?: string;
+function Input({ label, value, onChange, placeholder, type = 'text', pattern, title: inputTitle, required }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string; pattern?: string; title?: string; required?: boolean;
 }) {
   const id = `input-${label.toLowerCase().replace(/\s+/g, '-')}`;
   return (
     <div>
-      <label htmlFor={id} className="input-label">{label}</label>
+      <label htmlFor={id} className="input-label">{label}{required && <span className="text-red-500 ml-0.5" aria-hidden="true">*</span>}</label>
       <input
         id={id}
         type={type}
@@ -28,6 +28,8 @@ function Input({ label, value, onChange, placeholder, type = 'text', pattern, ti
         title={inputTitle}
         className="input-field"
         aria-label={label}
+        required={required}
+        aria-required={required}
       />
     </div>
   );
@@ -117,17 +119,17 @@ function SectionCard({ title, children, onRemove, defaultOpen = true }: {
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
       <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-100">
-        <button onClick={() => setOpen(!open)} className="flex items-center gap-2 text-sm font-medium text-gray-700 flex-1 text-left">
+        <button onClick={() => setOpen(!open)} className="flex items-center gap-2 text-sm font-medium text-gray-700 flex-1 text-left" aria-expanded={open}>
           <GripVertical className="w-3.5 h-3.5 text-gray-300" />
           {title}
         </button>
         <div className="flex items-center gap-1">
           {onRemove && (
-            <button onClick={onRemove} className="p-1 text-gray-400 hover:text-red-500 transition-colors">
+            <button onClick={onRemove} className="p-1 text-gray-400 hover:text-red-500 transition-colors" aria-label={`Remove ${title}`}>
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
-          <button onClick={() => setOpen(!open)} className="p-1 text-gray-400">
+          <button onClick={() => setOpen(!open)} className="p-1 text-gray-400" aria-expanded={open} aria-label={open ? 'Collapse section' : 'Expand section'}>
             {open ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
         </div>
@@ -139,41 +141,42 @@ function SectionCard({ title, children, onRemove, defaultOpen = true }: {
 
 /* ── Personal Info Editor ────────────────────────────────── */
 
-export function PersonalInfoEditor() {
-  const { data, updatePersonalInfo } = useResumeStore();
-  const pi = data.personalInfo;
+export const PersonalInfoEditor = memo(function PersonalInfoEditor() {
+  const pi = useResumeStore((s) => s.data.personalInfo);
+  const updatePersonalInfo = useResumeStore((s) => s.updatePersonalInfo);
 
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
-        <Input label="First Name" value={pi.firstName} onChange={(v) => updatePersonalInfo({ firstName: v })} placeholder="John" />
+        <Input label="First Name" value={pi.firstName} onChange={(v) => updatePersonalInfo({ firstName: v })} placeholder="John" required />
         <Input label="Last Name" value={pi.lastName} onChange={(v) => updatePersonalInfo({ lastName: v })} placeholder="Doe" />
       </div>
       <Input label="Professional Title" value={pi.title} onChange={(v) => updatePersonalInfo({ title: v })} placeholder="Senior Software Engineer" />
       <div className="grid grid-cols-2 gap-3">
-        <Input label="Email" value={pi.email} onChange={(v) => updatePersonalInfo({ email: v })} placeholder="john@email.com" type="email" />
+        <Input label="Email" value={pi.email} onChange={(v) => updatePersonalInfo({ email: v })} placeholder="john@email.com" type="email" required />
         <Input label="Phone" value={pi.phone} onChange={(v) => updatePersonalInfo({ phone: v })} placeholder="+1 (555) 123-4567" type="tel" />
       </div>
       <Input label="Location" value={pi.location} onChange={(v) => updatePersonalInfo({ location: v })} placeholder="San Francisco, CA" />
-      <Input label="LinkedIn" value={pi.linkedin} onChange={(v) => updatePersonalInfo({ linkedin: v })} placeholder="linkedin.com/in/johndoe" />
+      <Input label="LinkedIn" value={pi.linkedin} onChange={(v) => updatePersonalInfo({ linkedin: v })} placeholder="linkedin.com/in/johndoe" type="url" />
       <div className="grid grid-cols-2 gap-3">
-        <Input label="GitHub" value={pi.github} onChange={(v) => updatePersonalInfo({ github: v })} placeholder="github.com/johndoe" />
-        <Input label="Website" value={pi.website} onChange={(v) => updatePersonalInfo({ website: v })} placeholder="johndoe.dev" />
+        <Input label="GitHub" value={pi.github} onChange={(v) => updatePersonalInfo({ github: v })} placeholder="github.com/johndoe" type="url" />
+        <Input label="Website" value={pi.website} onChange={(v) => updatePersonalInfo({ website: v })} placeholder="johndoe.dev" type="url" />
       </div>
     </div>
   );
-}
+});
 
 /* ── Summary Editor ──────────────────────────────────────── */
 
-export function SummaryEditor() {
-  const { data, updateSummary } = useResumeStore();
+export const SummaryEditor = memo(function SummaryEditor() {
+  const summary = useResumeStore((s) => s.data.summary);
+  const updateSummary = useResumeStore((s) => s.updateSummary);
 
   return (
     <div>
       <TextArea
         label="Professional Summary"
-        value={data.summary}
+        value={summary}
         onChange={updateSummary}
         placeholder="Results-driven professional with X+ years of experience..."
         rows={4}
@@ -181,16 +184,19 @@ export function SummaryEditor() {
       <p className="text-[10px] text-gray-400 mt-1">Aim for 30-80 words. Start with a role descriptor and include key achievements.</p>
     </div>
   );
-}
+});
 
 /* ── Experience Editor ───────────────────────────────────── */
 
-export function ExperienceEditor() {
-  const { data, addExperience, updateExperience, removeExperience } = useResumeStore();
+export const ExperienceEditor = memo(function ExperienceEditor() {
+  const experience = useResumeStore((s) => s.data.experience);
+  const addExperience = useResumeStore((s) => s.addExperience);
+  const updateExperience = useResumeStore((s) => s.updateExperience);
+  const removeExperience = useResumeStore((s) => s.removeExperience);
 
   return (
     <div className="space-y-3">
-      {data.experience.map((exp, i) => (
+      {experience.map((exp, i) => (
         <SectionCard
           key={exp.id}
           title={exp.position || exp.company || `Experience ${i + 1}`}
@@ -222,16 +228,19 @@ export function ExperienceEditor() {
       </button>
     </div>
   );
-}
+});
 
 /* ── Education Editor ────────────────────────────────────── */
 
-export function EducationEditor() {
-  const { data, addEducation, updateEducation, removeEducation } = useResumeStore();
+export const EducationEditor = memo(function EducationEditor() {
+  const education = useResumeStore((s) => s.data.education);
+  const addEducation = useResumeStore((s) => s.addEducation);
+  const updateEducation = useResumeStore((s) => s.updateEducation);
+  const removeEducation = useResumeStore((s) => s.removeEducation);
 
   return (
     <div className="space-y-3">
-      {data.education.map((edu, i) => (
+      {education.map((edu, i) => (
         <SectionCard
           key={edu.id}
           title={edu.institution || `Education ${i + 1}`}
@@ -266,16 +275,19 @@ export function EducationEditor() {
       </button>
     </div>
   );
-}
+});
 
 /* ── Skills Editor ───────────────────────────────────────── */
 
-export function SkillsEditor() {
-  const { data, addSkillCategory, updateSkillCategory, removeSkillCategory } = useResumeStore();
+export const SkillsEditor = memo(function SkillsEditor() {
+  const skills = useResumeStore((s) => s.data.skills);
+  const addSkillCategory = useResumeStore((s) => s.addSkillCategory);
+  const updateSkillCategory = useResumeStore((s) => s.updateSkillCategory);
+  const removeSkillCategory = useResumeStore((s) => s.removeSkillCategory);
 
   return (
     <div className="space-y-3">
-      {data.skills.map((cat, i) => (
+      {skills.map((cat, i) => (
         <SectionCard
           key={cat.id}
           title={cat.category || `Category ${i + 1}`}
@@ -299,16 +311,19 @@ export function SkillsEditor() {
       </button>
     </div>
   );
-}
+});
 
 /* ── Projects Editor ─────────────────────────────────────── */
 
-export function ProjectsEditor() {
-  const { data, addProject, updateProject, removeProject } = useResumeStore();
+export const ProjectsEditor = memo(function ProjectsEditor() {
+  const projects = useResumeStore((s) => s.data.projects);
+  const addProject = useResumeStore((s) => s.addProject);
+  const updateProject = useResumeStore((s) => s.updateProject);
+  const removeProject = useResumeStore((s) => s.removeProject);
 
   return (
     <div className="space-y-3">
-      {data.projects.map((proj, i) => (
+      {projects.map((proj, i) => (
         <SectionCard
           key={proj.id}
           title={proj.name || `Project ${i + 1}`}
@@ -317,7 +332,7 @@ export function ProjectsEditor() {
         >
           <Input label="Project Name" value={proj.name} onChange={(v) => updateProject(proj.id, { name: v })} placeholder="My Awesome Project" />
           <TextArea label="Description" value={proj.description} onChange={(v) => updateProject(proj.id, { description: v })} placeholder="Brief description..." rows={2} />
-          <Input label="URL" value={proj.url} onChange={(v) => updateProject(proj.id, { url: v })} placeholder="github.com/user/project" />
+          <Input label="URL" value={proj.url} onChange={(v) => updateProject(proj.id, { url: v })} placeholder="github.com/user/project" type="url" />
           <div>
             <label className="input-label">Technologies (comma-separated)</label>
             <input
@@ -342,16 +357,19 @@ export function ProjectsEditor() {
       </button>
     </div>
   );
-}
+});
 
 /* ── Certifications Editor ───────────────────────────────── */
 
-export function CertificationsEditor() {
-  const { data, addCertification, updateCertification, removeCertification } = useResumeStore();
+export const CertificationsEditor = memo(function CertificationsEditor() {
+  const certifications = useResumeStore((s) => s.data.certifications);
+  const addCertification = useResumeStore((s) => s.addCertification);
+  const updateCertification = useResumeStore((s) => s.updateCertification);
+  const removeCertification = useResumeStore((s) => s.removeCertification);
 
   return (
     <div className="space-y-3">
-      {data.certifications.map((cert, i) => (
+      {certifications.map((cert, i) => (
         <SectionCard
           key={cert.id}
           title={cert.name || `Certification ${i + 1}`}
@@ -363,7 +381,7 @@ export function CertificationsEditor() {
             <Input label="Issuer" value={cert.issuer} onChange={(v) => updateCertification(cert.id, { issuer: v })} placeholder="Amazon Web Services" />
             <Input label="Date" value={cert.date} onChange={(v) => updateCertification(cert.id, { date: v })} placeholder="2023-06" type="month" />
           </div>
-          <Input label="URL" value={cert.url} onChange={(v) => updateCertification(cert.id, { url: v })} placeholder="credential URL" />
+          <Input label="URL" value={cert.url} onChange={(v) => updateCertification(cert.id, { url: v })} placeholder="credential URL" type="url" />
         </SectionCard>
       ))}
       <button onClick={addCertification} className="btn-secondary w-full text-sm">
@@ -371,16 +389,19 @@ export function CertificationsEditor() {
       </button>
     </div>
   );
-}
+});
 
 /* ── Languages Editor ────────────────────────────────────── */
 
-export function LanguagesEditor() {
-  const { data, addLanguage, updateLanguage, removeLanguage } = useResumeStore();
+export const LanguagesEditor = memo(function LanguagesEditor() {
+  const languages = useResumeStore((s) => s.data.languages);
+  const addLanguage = useResumeStore((s) => s.addLanguage);
+  const updateLanguage = useResumeStore((s) => s.updateLanguage);
+  const removeLanguage = useResumeStore((s) => s.removeLanguage);
 
   return (
     <div className="space-y-3">
-      {data.languages.map((lang, i) => (
+      {languages.map((lang, i) => (
         <SectionCard
           key={lang.id}
           title={lang.language || `Language ${i + 1}`}
@@ -411,16 +432,19 @@ export function LanguagesEditor() {
       </button>
     </div>
   );
-}
+});
 
 /* ── Awards Editor ───────────────────────────────────────── */
 
-export function AwardsEditor() {
-  const { data, addAward, updateAward, removeAward } = useResumeStore();
+export const AwardsEditor = memo(function AwardsEditor() {
+  const awards = useResumeStore((s) => s.data.awards);
+  const addAward = useResumeStore((s) => s.addAward);
+  const updateAward = useResumeStore((s) => s.updateAward);
+  const removeAward = useResumeStore((s) => s.removeAward);
 
   return (
     <div className="space-y-3">
-      {data.awards.map((award, i) => (
+      {awards.map((award, i) => (
         <SectionCard
           key={award.id}
           title={award.title || `Award ${i + 1}`}
@@ -440,16 +464,19 @@ export function AwardsEditor() {
       </button>
     </div>
   );
-}
+});
 
 /* ── Volunteering Editor ─────────────────────────────────── */
 
-export function VolunteeringEditor() {
-  const { data, addVolunteering, updateVolunteering, removeVolunteering } = useResumeStore();
+export const VolunteeringEditor = memo(function VolunteeringEditor() {
+  const volunteering = useResumeStore((s) => s.data.volunteering);
+  const addVolunteering = useResumeStore((s) => s.addVolunteering);
+  const updateVolunteering = useResumeStore((s) => s.updateVolunteering);
+  const removeVolunteering = useResumeStore((s) => s.removeVolunteering);
 
   return (
     <div className="space-y-3">
-      {data.volunteering.map((vol, i) => (
+      {volunteering.map((vol, i) => (
         <SectionCard
           key={vol.id}
           title={vol.organization || `Volunteering ${i + 1}`}
@@ -470,16 +497,19 @@ export function VolunteeringEditor() {
       </button>
     </div>
   );
-}
+});
 
 /* ── Publications Editor ─────────────────────────────────── */
 
-export function PublicationsEditor() {
-  const { data, addPublication, updatePublication, removePublication } = useResumeStore();
+export const PublicationsEditor = memo(function PublicationsEditor() {
+  const publications = useResumeStore((s) => s.data.publications);
+  const addPublication = useResumeStore((s) => s.addPublication);
+  const updatePublication = useResumeStore((s) => s.updatePublication);
+  const removePublication = useResumeStore((s) => s.removePublication);
 
   return (
     <div className="space-y-3">
-      {data.publications.map((pub, i) => (
+      {publications.map((pub, i) => (
         <SectionCard
           key={pub.id}
           title={pub.title || `Publication ${i + 1}`}
@@ -491,7 +521,7 @@ export function PublicationsEditor() {
             <Input label="Publisher" value={pub.publisher} onChange={(v) => updatePublication(pub.id, { publisher: v })} placeholder="Journal/Conference" />
             <Input label="Date" value={pub.date} onChange={(v) => updatePublication(pub.id, { date: v })} placeholder="2023-06" type="month" />
           </div>
-          <Input label="URL" value={pub.url} onChange={(v) => updatePublication(pub.id, { url: v })} placeholder="doi.org/..." />
+          <Input label="URL" value={pub.url} onChange={(v) => updatePublication(pub.id, { url: v })} placeholder="doi.org/..." type="url" />
         </SectionCard>
       ))}
       <button onClick={addPublication} className="btn-secondary w-full text-sm">
@@ -499,16 +529,19 @@ export function PublicationsEditor() {
       </button>
     </div>
   );
-}
+});
 
 /* ── References Editor ───────────────────────────────────── */
 
-export function ReferencesEditor() {
-  const { data, addReference, updateReference, removeReference } = useResumeStore();
+export const ReferencesEditor = memo(function ReferencesEditor() {
+  const references = useResumeStore((s) => s.data.references);
+  const addReference = useResumeStore((s) => s.addReference);
+  const updateReference = useResumeStore((s) => s.updateReference);
+  const removeReference = useResumeStore((s) => s.removeReference);
 
   return (
     <div className="space-y-3">
-      {data.references.map((ref, i) => (
+      {references.map((ref, i) => (
         <SectionCard
           key={ref.id}
           title={ref.name || `Reference ${i + 1}`}
@@ -532,4 +565,4 @@ export function ReferencesEditor() {
       </button>
     </div>
   );
-}
+});

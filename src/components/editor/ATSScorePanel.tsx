@@ -39,12 +39,12 @@ export default function ATSScorePanel() {
   const circumference = 2 * Math.PI * 54;
   const dashOffset = circumference - (atsResult.score / 100) * circumference;
 
-  const brutalTips = (atsResult as any).brutalTips ?? [];
-  const keywordAnalysis = (atsResult as any).keywordAnalysis;
+  const brutalTips: Array<{severity: string; message: string; section?: string; fix?: string; impact?: string}> = (atsResult as any).brutalTips ?? [];
+  const keywordAnalysis: {matched: string[]; missing: string[]; density: number; verdict: string} | undefined = (atsResult as any).keywordAnalysis;
 
-  const criticals = brutalTips.filter((t: any) => t.severity === 'critical');
-  const warnings = brutalTips.filter((t: any) => t.severity === 'warning');
-  const tips = brutalTips.filter((t: any) => t.severity === 'tip');
+  const criticals = brutalTips.filter((t) => t.severity === 'critical');
+  const warnings = brutalTips.filter((t) => t.severity === 'warning');
+  const tips = brutalTips.filter((t) => t.severity === 'tip');
 
   const handleSaveJD = () => {
     setJobDescription(localJD);
@@ -222,6 +222,7 @@ export default function ATSScorePanel() {
               <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                 <Globe className="w-3 h-3" /> Import from URL
               </p>
+              <p className="text-[9px] text-gray-400 mb-1.5">Job page content is fetched via a third-party proxy (allorigins.win). No personal data is sent.</p>
               <div className="flex gap-2">
                 <input
                   type="url"
@@ -370,7 +371,7 @@ export default function ATSScorePanel() {
           </h3>
           <div className="space-y-2">
             {/* Criticals first */}
-            {[...criticals, ...warnings, ...tips].map((tip: any, i: number) => {
+            {[...criticals, ...warnings, ...tips].map((tip, i: number) => {
               const s = SEV[tip.severity as keyof typeof SEV];
               const Icon = s.icon;
               const expanded = expandedTips.has(i);

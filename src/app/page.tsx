@@ -162,7 +162,7 @@ const features = [
   {
     icon: Layout,
     title: '8 Professional Templates',
-    desc: 'From classic professional to bold creative — every template is ATS-tested and recruiter-approved.',
+    desc: 'From classic professional to bold creative — every template is designed for ATS compatibility.',
   },
   {
     icon: Target,
@@ -257,7 +257,7 @@ function Templates() {
             <span className="gradient-text"> Templates</span>
           </h2>
           <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
-            Every template is tested against major ATS systems including Workday, Lever, Greenhouse, and iCIMS.
+            Every template is designed to be ATS-compatible with clean formatting and standard section headings.
           </p>
         </div>
 
@@ -364,7 +364,7 @@ function HowItWorks() {
 
 function ATSSection() {
   const checks = [
-    'ATS-compatible formatting verified across Workday, Lever, Greenhouse, iCIMS',
+    'ATS-compatible formatting designed for clean parsing with standard section headings',
     'Machine-readable text — no images, tables, or complex multi-column layouts',
     'Standard section headings recognized by 99% of ATS systems',
     'Optimized keyword density for job-matching algorithms',
@@ -383,7 +383,7 @@ function ATSSection() {
             </h2>
             <p className="text-blue-100 text-lg mb-8">
               Over 90% of large companies use Applicant Tracking Systems to filter resumes.
-              ResumeForge ensures your resume passes every time.
+              ResumeForge helps your resume get past automated filters.
             </p>
             <div className="space-y-3">
               {checks.map((c, i) => (
@@ -507,7 +507,7 @@ const faqs = [
   },
   {
     q: 'Are the templates tested with real ATS systems?',
-    a: 'Yes. All 8 templates have been tested against major ATS platforms including Workday, Lever, Greenhouse, and iCIMS to ensure maximum compatibility.',
+    a: 'Our templates use clean formatting, standard section headings, and ATS-friendly layouts. While no tool can guarantee compatibility with every ATS, our designs follow best practices widely recommended by career experts.',
   },
 ];
 
@@ -529,6 +529,7 @@ function FAQ() {
               <button
                 onClick={() => setOpen(open === i ? null : i)}
                 className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+                aria-expanded={open === i}
               >
                 <span className="font-medium text-gray-900">{faq.q}</span>
                 <ChevronDown
@@ -561,8 +562,7 @@ function CTA() {
           Your Dream Job Is One Resume Away
         </h2>
         <p className="text-gray-400 text-lg mb-10 max-w-2xl mx-auto">
-          Join thousands of job seekers who've landed interviews at top companies.
-          Start building your ATS-optimized resume today.
+          Start building your ATS-optimized resume today — it's free and takes just minutes.
         </p>
         <Link
           href="/builder"
@@ -615,7 +615,7 @@ export default function LandingPage() {
   return (
     <main className="min-h-screen">
       {/* Navbar */}
-      <nav className="fixed top-0 inset-x-0 z-50 glass">
+      <nav className="fixed top-0 inset-x-0 z-50 glass" aria-label="Main navigation">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center">
