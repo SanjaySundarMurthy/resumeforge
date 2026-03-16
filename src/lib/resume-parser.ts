@@ -48,21 +48,18 @@ async function extractPDFText(file: File): Promise<string> {
     // Dynamically import pdfjs to avoid SSR issues
     const pdfjsLib = await import('pdfjs-dist');
 
-    // Set the worker source — use unpkg CDN for reliable .mjs serving
-    // pdfjs v5+ uses ES modules, so we need .mjs worker
-    if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-    }
+    // Disable external worker entirely — run in fake-worker (main-thread) mode.
+    // This avoids all CDN CORS/SharedArrayBuffer/defineProperty issues in pdfjs v5.
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 
     const arrayBuffer = await file.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
 
-    // Use useWorkerFetch: false to avoid CORS issues with the worker
     const loadingTask = pdfjsLib.getDocument({
-      data: uint8Array,
+      data: new Uint8Array(arrayBuffer),
       useWorkerFetch: false,
       isEvalSupported: false,
       useSystemFonts: true,
+      disableFontFace: true,
     });
 
     const pdf = await loadingTask.promise;
@@ -71,40 +68,21 @@ async function extractPDFText(file: File): Promise<string> {
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
-      const text = content.items
-        .map((item: any) => {
-          if (item.str !== undefined) return item.str;
-          return '';
-        })
+      const pageText = content.items
+        .map((item: any) => (item.str !== undefined ? item.str : ''))
         .join(' ');
-      pages.push(text);
+      pages.push(pageText);
     }
 
-    return pages.join('\n\n');
+    const result = pages.join('\n\n').replace(/\s{3,}/g, ' ').trim();
+    if (!result) throw new Error('No readable text found in this PDF');
+    return result;
   } catch (err: any) {
-    // Fallback: try without worker if the worker failed to load
-    console.warn('PDF worker failed, trying without worker:', err.message);
-    try {
-      const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc = '';
-
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({
-        data: new Uint8Array(arrayBuffer),
-        useWorkerFetch: false,
-        isEvalSupported: false,
-      }).promise;
-
-      const pages: string[] = [];
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        pages.push(content.items.map((item: any) => item.str || '').join(' '));
-      }
-      return pages.join('\n\n');
-    } catch (fallbackErr: any) {
-      throw new Error(`PDF parsing failed: ${fallbackErr.message || 'Unable to read PDF file'}. Try saving as a different PDF or use DOCX/TXT format.`);
-    }
+    const msg = err?.message || 'Unknown error';
+    throw new Error(
+      `PDF parsing failed: ${msg}. ` +
+      `For best results, save your PDF from Word/Google Docs, or upload as DOCX/TXT instead.`
+    );
   }
 }
 

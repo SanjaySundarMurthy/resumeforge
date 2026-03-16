@@ -24,6 +24,23 @@ const templateMap: Record<TemplateId, React.ComponentType<{ data: ResumeData; st
   bold: BoldTemplate,
 };
 
+/** A4 page height at 96 dpi = 1123px */
+const A4_H = 1123;
+
+/** Returns the min/max height and overflow based on pageMode */
+function getPageConstraints(mode?: string): React.CSSProperties {
+  switch (mode) {
+    case 'single':
+      return { minHeight: `${A4_H}px`, maxHeight: `${A4_H}px`, overflow: 'hidden' };
+    case 'double':
+      return { minHeight: `${A4_H * 2}px` };
+    case 'triple':
+      return { minHeight: `${A4_H * 3}px` };
+    default: // auto
+      return { minHeight: `${A4_H}px` };
+  }
+}
+
 interface ResumePreviewProps {
   data: ResumeData;
   style: ResumeStyle;
@@ -39,6 +56,8 @@ interface ResumePreviewProps {
 const ResumePreview = forwardRef<HTMLDivElement, ResumePreviewProps>(
   ({ data, style, scale = 1, className = '' }, ref) => {
     const Template = templateMap[style.template] || ProfessionalTemplate;
+    const pageConstraints = getPageConstraints(style.pageMode);
+    const pageCount = style.pageMode === 'double' ? 2 : style.pageMode === 'triple' ? 3 : 1;
 
     return (
       <div
@@ -46,7 +65,7 @@ const ResumePreview = forwardRef<HTMLDivElement, ResumePreviewProps>(
         style={{
           width: `${794 * scale}px`,
           height: 'auto',
-          overflow: 'hidden',
+          overflow: 'visible',
         }}
       >
         <div
@@ -56,12 +75,43 @@ const ResumePreview = forwardRef<HTMLDivElement, ResumePreviewProps>(
             transformOrigin: 'top left',
             transform: `scale(${scale})`,
             width: '794px',
-            minHeight: '1123px',
             background: '#fff',
             boxShadow: scale < 1 ? 'none' : '0 4px 24px rgba(0,0,0,0.08)',
+            position: 'relative',
+            ...pageConstraints,
           }}
         >
           <Template data={data} style={style} />
+
+          {/* Page break indicators */}
+          {style.showPageBreakIndicators && pageCount >= 1 && Array.from({ length: pageCount - 1 }, (_, i) => (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                left: 0, right: 0,
+                top: `${A4_H * (i + 1)}px`,
+                height: '0',
+                borderTop: '2px dashed #93c5fd',
+                zIndex: 10,
+                pointerEvents: 'none',
+              }}
+            />
+          ))}
+          {/* Always show at least one page-break guide in auto mode */}
+          {style.showPageBreakIndicators && (style.pageMode ?? 'auto') === 'auto' && (
+            <div
+              style={{
+                position: 'absolute',
+                left: 0, right: 0,
+                top: `${A4_H}px`,
+                height: '0',
+                borderTop: '2px dashed #93c5fd',
+                zIndex: 10,
+                pointerEvents: 'none',
+              }}
+            />
+          )}
         </div>
       </div>
     );
