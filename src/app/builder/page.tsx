@@ -7,7 +7,7 @@ import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import { useResumeStore } from '@/store/useResumeStore';
+import { useResumeStore, useHasHydrated } from '@/store/useResumeStore';
 import { generatePDF, generatePNG } from '@/lib/pdf-generator';
 import { parseResumeFile } from '@/lib/resume-parser';
 import { exportToDOCX } from '@/lib/docx-exporter';
@@ -129,6 +129,8 @@ function useUndoRedo(maxHistory = 30) {
 
 /* ─────────────────────────────────────────────────────────── */
 export default function BuilderPage() {
+  const hydrated = useHasHydrated();
+
   /* Granular Zustand selectors — prevent full re-render on every keystroke */
   const data = useResumeStore((s) => s.data);
   const style = useResumeStore((s) => s.style);
@@ -406,6 +408,45 @@ export default function BuilderPage() {
     }
   };
 
+  // Gate rendering until Zustand has rehydrated from localStorage to avoid
+  // React hydration mismatches between server defaults and persisted state.
+  if (!hydrated) {
+    return (
+      <div className="h-screen flex flex-col bg-gray-100 animate-pulse">
+        <div className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-16 h-4 bg-gray-200 rounded" />
+            <div className="w-px h-5 bg-gray-200" />
+            <div className="w-24 h-4 bg-gray-200 rounded" />
+            <div className="w-32 h-2 bg-gray-200 rounded-full ml-2" />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gray-200 rounded-lg" />
+            <div className="w-8 h-8 bg-gray-200 rounded-lg" />
+            <div className="w-24 h-8 bg-blue-200 rounded-lg" />
+          </div>
+        </div>
+        <div className="flex-1 flex overflow-hidden">
+          <div className="w-[420px] bg-white border-r border-gray-200 hidden md:flex flex-col">
+            <div className="flex border-b border-gray-200 px-2 py-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex-1 flex justify-center"><div className="w-12 h-3 bg-gray-200 rounded" /></div>
+              ))}
+            </div>
+            <div className="p-4 space-y-2">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="h-10 bg-gray-100 rounded-lg" />
+              ))}
+            </div>
+          </div>
+          <div className="flex-1 bg-gray-100 flex items-start justify-center p-8">
+            <div className="bg-white rounded-sm shadow-lg w-[476px]" style={{ aspectRatio: '794/1123' }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <ErrorBoundary fallbackMessage="The resume builder encountered an error. Your data is safe.">
       <div className="h-screen flex flex-col bg-gray-100">
@@ -615,32 +656,32 @@ export default function BuilderPage() {
 
         <div className="flex items-center gap-1 sm:gap-1.5">
           {/* Undo / Redo */}
-          <button onClick={handleUndo} disabled={!canUndo} className="btn-ghost p-1.5" title="Undo (Ctrl+Z)">
+          <button onClick={handleUndo} disabled={!canUndo} className="btn-ghost p-1.5" title="Undo (Ctrl+Z)" aria-label="Undo">
             <Undo2 className={`w-4 h-4 ${canUndo ? '' : 'opacity-30'}`} />
           </button>
-          <button onClick={handleRedo} disabled={!canRedo} className="btn-ghost p-1.5" title="Redo (Ctrl+Shift+Z)">
+          <button onClick={handleRedo} disabled={!canRedo} className="btn-ghost p-1.5" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">
             <Redo2 className={`w-4 h-4 ${canRedo ? '' : 'opacity-30'}`} />
           </button>
 
           <div className="h-5 w-px bg-gray-200 hidden sm:block" />
 
           {/* Zoom (desktop) */}
-          <div className="hidden lg:flex items-center gap-0.5 mr-1">
-            <button onClick={zoomOut} className="btn-ghost p-1.5"><ZoomOut className="w-4 h-4" /></button>
-            <span className="text-xs text-gray-500 w-10 text-center tabular-nums">{Math.round(previewScale * 100)}%</span>
-            <button onClick={zoomIn} className="btn-ghost p-1.5"><ZoomIn className="w-4 h-4" /></button>
-            <button onClick={zoomReset} className="btn-ghost p-1.5"><RotateCcw className="w-3.5 h-3.5" /></button>
+          <div className="hidden lg:flex items-center gap-0.5 mr-1" role="group" aria-label="Zoom controls">
+            <button onClick={zoomOut} className="btn-ghost p-1.5" aria-label="Zoom out"><ZoomOut className="w-4 h-4" /></button>
+            <span className="text-xs text-gray-500 w-10 text-center tabular-nums" aria-label={`Zoom ${Math.round(previewScale * 100)}%`}>{Math.round(previewScale * 100)}%</span>
+            <button onClick={zoomIn} className="btn-ghost p-1.5" aria-label="Zoom in"><ZoomIn className="w-4 h-4" /></button>
+            <button onClick={zoomReset} className="btn-ghost p-1.5" aria-label="Reset zoom"><RotateCcw className="w-3.5 h-3.5" /></button>
           </div>
 
           <button onClick={() => setShowClearConfirm(true)} className="btn-ghost text-xs gap-1 text-red-500 hover:text-red-600 hover:bg-red-50 hidden sm:inline-flex" title="Clear all data">
             <Eraser className="w-3.5 h-3.5" /> <span className="hidden lg:inline">Clear</span>
           </button>
 
-          <button onClick={loadSampleData} className="btn-ghost text-xs gap-1.5 hidden sm:inline-flex">
+          <button onClick={loadSampleData} className="btn-ghost text-xs gap-1.5 hidden sm:inline-flex" aria-label="Load sample resume data">
             <Sparkles className="w-3.5 h-3.5" /> <span className="hidden lg:inline">Sample</span>
           </button>
 
-          <button onClick={() => setShowImportZone(true)} className="btn-ghost text-xs gap-1.5">
+          <button onClick={() => setShowImportZone(true)} className="btn-ghost text-xs gap-1.5" aria-label="Import resume">
             <Upload className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Import</span>
           </button>
 
@@ -732,6 +773,8 @@ export default function BuilderPage() {
                       key={key}
                       onClick={() => setActiveSection(key as SectionKey | 'personalInfo')}
                       title={`${label}${isDraggable ? ' (drag to reorder)' : ''}`}
+                      aria-label={`Edit ${label} section`}
+                      aria-current={activeSection === key ? 'true' : undefined}
                       draggable={isDraggable}
                       onDragStart={isDraggable ? () => handleDragStart(idx) : undefined}
                       onDragOver={isDraggable ? (e) => handleDragOver(e, idx) : undefined}

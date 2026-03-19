@@ -67,7 +67,7 @@ export default function DesignPanel() {
   };
 
   return (
-    <div className="space-y-7 p-1">
+    <div className="space-y-7 p-1" role="form" aria-label="Resume design options">
 
       {/* ── Template Selection ── */}
       <section>
@@ -101,6 +101,8 @@ export default function DesignPanel() {
               <button
                 key={m.id}
                 onClick={() => updateStyle({ pageMode: m.id })}
+                aria-label={`${m.label}: ${m.desc}`}
+                aria-pressed={active}
                 className={`flex items-center gap-2.5 p-3 rounded-xl border text-left transition-all ${
                   active
                     ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-400/30 shadow-sm'
@@ -147,8 +149,9 @@ export default function DesignPanel() {
           ))}
         </div>
         <div className="mt-3 flex items-center gap-3 bg-gray-50 rounded-lg p-2">
-          <label className="text-[10px] text-gray-500 shrink-0">Custom:</label>
+          <label className="text-[10px] text-gray-500 shrink-0" htmlFor="custom-color">Custom:</label>
           <input
+            id="custom-color"
             type="color"
             value={style.primaryColor}
             onChange={(e) => setColor(e.target.value)}
@@ -401,6 +404,7 @@ export default function DesignPanel() {
       <section>
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
+          aria-expanded={showAdvanced}
           className="w-full flex items-center justify-between py-2"
         >
           <h3 className="section-label">
@@ -508,6 +512,8 @@ export default function DesignPanel() {
               <button
                 key={section}
                 onClick={() => toggleSection(section)}
+                aria-pressed={!isHidden}
+                aria-label={`${isHidden ? 'Show' : 'Hide'} ${SECTION_LABELS[section]} section`}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-all ${
                   isHidden
                     ? 'bg-gray-50 text-gray-400 border border-gray-100'
@@ -551,6 +557,7 @@ function SliderField({
           min={min} max={max} step={step}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
+          aria-label={`${label}: ${typeof value === 'number' && value % 1 !== 0 ? value.toFixed(1) : value}${unit}`}
           className="w-full h-2 rounded-full appearance-none bg-gray-200 accent-blue-600 cursor-pointer slider-styled"
         />
         <div

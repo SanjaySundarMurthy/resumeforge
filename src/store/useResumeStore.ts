@@ -1,5 +1,6 @@
 /* ── ResumeForge — Zustand State Store ────────────────────── */
 
+import { useState, useEffect } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
@@ -809,3 +810,18 @@ export const useResumeStore = create<ResumeState>()(
     }
   )
 );
+
+/**
+ * Hook that returns `true` only after Zustand has rehydrated from localStorage.
+ * Use this to gate client rendering and avoid React hydration mismatches.
+ */
+export function useHasHydrated() {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    // Zustand persist middleware fires the rehydration synchronously before
+    // React's first useEffect runs, so by the time this effect fires the
+    // store already holds the persisted state.
+    setHydrated(true);
+  }, []);
+  return hydrated;
+}

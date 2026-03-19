@@ -1,8 +1,9 @@
 /* ── Modern Template — TWO-COLUMN with Colored Sidebar ───── */
 'use client';
-import type { ResumeData, ResumeStyle, BulletStyle } from '@/types/resume';
+import type { ResumeData, ResumeStyle, BulletStyle, HeaderStyle } from '@/types/resume';
 import { BULLET_SYMBOLS, NAME_SIZE_OPTIONS } from '@/types/resume';
 import { formatDateRange, formatDate, ensureUrl, isLinkable } from '@/lib/utils';
+import { formatHeaderText, showHeaderUnderline } from './template-utils';
 
 interface P { data: ResumeData; style: ResumeStyle; }
 
@@ -20,6 +21,10 @@ export default function ModernTemplate({ data, style }: P) {
   const bulletStyle = style.bulletStyle ?? 'disc';
   const nameMultiplier = NAME_SIZE_OPTIONS.find(n => n.id === (style.nameSize ?? 'large'))?.multiplier ?? 2.55;
   const bodyLetterSpacing = `${style.letterSpacing ?? 0}px`;
+  const headerSty = style.headerStyle ?? 'uppercase-underline';
+  const headerLetterSp = `${style.headerLetterSpacing ?? 1.5}px`;
+  const dateAlign = style.dateAlignment ?? 'right';
+  const skillMode = style.skillDisplayMode ?? 'tags';
 
   return (
     <div style={{ width: '794px', minHeight: '1123px', display: 'flex', background: '#fff', fontFamily: style.fontFamily, fontSize: `${BASE_FONT}px`, lineHeight: style.lineHeight ?? 1.5, color: '#1a1a1a' }}>
@@ -46,14 +51,26 @@ export default function ModernTemplate({ data, style }: P) {
         {/* Sidebar sections */}
         {sideOrder.map((key) => {
           switch (key) {
-            case 'skills': return skills.length > 0 ? <SideBar key={key} title="SKILLS" bf={BASE_FONT}>{skills.map((s) => (
+            case 'skills': return skills.length > 0 ? <SideBar key={key} title="SKILLS" bf={BASE_FONT}>
+              {skillMode === 'comma' ? skills.map((s) => (
+                <div key={s.id} style={{ marginBottom: '6px' }}>
+                  <p style={{ fontSize: fs(0.91), fontWeight: 700, opacity: 0.7, letterSpacing: '0.5px', marginBottom: '2px' }}>{s.category}</p>
+                  <p style={{ fontSize: fs(0.86), opacity: 0.9 }}>{s.items.join(', ')}</p>
+                </div>
+              )) : skillMode === 'bars' ? skills.map((s) => (
+                <div key={s.id} style={{ marginBottom: '10px' }}>
+                  <p style={{ fontSize: fs(0.91), fontWeight: 700, opacity: 0.7, letterSpacing: '0.5px', marginBottom: '4px' }}>{s.category}</p>
+                  {s.items.map((item, j) => <div key={j} style={{ fontSize: fs(0.82), display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px', opacity: 0.9 }}><span style={{ minWidth: '70px' }}>{item}</span><div style={{ flex: 1, height: '3px', background: 'rgba(255,255,255,0.15)', borderRadius: '2px' }}><div style={{ width: `${Math.max(45, 100 - j * 8)}%`, height: '100%', background: 'rgba(255,255,255,0.5)', borderRadius: '2px' }} /></div></div>)}
+                </div>
+              )) : skills.map((s) => (
               <div key={s.id} style={{ marginBottom: '10px' }}>
                 <p style={{ fontSize: fs(0.91), fontWeight: 700, opacity: 0.7, letterSpacing: '0.5px', marginBottom: '4px' }}>{s.category}</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>{s.items.map((item, j) => (
                   <span key={j} style={{ fontSize: fs(0.82), padding: '2px 8px', borderRadius: '10px', background: 'rgba(255,255,255,0.15)', display: 'inline-block' }}>{item}</span>
                 ))}</div>
               </div>
-            ))}</SideBar> : null;
+            ))}
+            </SideBar> : null;
             case 'languages': return languages.length > 0 ? <SideBar key={key} title="LANGUAGES" bf={BASE_FONT}>{languages.map((l) => (
               <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: fs(0.91), margin: '3px 0' }}><span>{l.language}</span><span style={{ opacity: 0.7 }}>{l.proficiency}</span></div>
             ))}</SideBar> : null;
@@ -83,19 +100,20 @@ export default function ModernTemplate({ data, style }: P) {
                 ))}</ul>}
               </div>
             ))}</MainSec> : null;
-            case 'education': return education.length > 0 ? <MainSec key={key} title="Education" c={c} sp={sp} bf={BASE_FONT}>{education.map((e) => (
-              <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            case 'education': return education.length > 0 ? <MainSec key={key} title="Education" c={c} sp={sp} bf={BASE_FONT} headerStyle={headerSty} headerLetterSpacing={headerLetterSp}>{education.map((e) => (
+              <div key={e.id} style={{ display: dateAlign === 'right' ? 'flex' : 'block', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div><h3 style={{ fontSize: fs(1.09), fontWeight: 700, margin: 0 }}>{e.degree}{e.field ? ` in ${e.field}` : ''}</h3><p style={{ fontSize: fs(1.0), color: c, margin: 0 }}>{e.institution}</p>{e.gpa && <p style={{ fontSize: fs(0.91), color: '#9ca3af', margin: 0 }}>GPA: {e.gpa}</p>}</div>
-                <span style={{ fontSize: fs(0.82), padding: '2px 8px', background: '#f3f4f6', borderRadius: '4px', color: '#6b7280' }}>{formatDateRange(e.startDate, e.endDate, false)}</span>
+                {dateAlign === 'right' && <span style={{ fontSize: fs(0.82), padding: '2px 8px', background: '#f3f4f6', borderRadius: '4px', color: '#6b7280' }}>{formatDateRange(e.startDate, e.endDate, false)}</span>}
+                {dateAlign !== 'right' && <p style={{ fontSize: fs(0.82), color: '#6b7280', margin: '1px 0 0' }}>{formatDateRange(e.startDate, e.endDate, false)}</p>}
               </div>))}</MainSec> : null;
-            case 'projects': return projects.length > 0 ? <MainSec key={key} title="Projects" c={c} sp={sp} bf={BASE_FONT}>{projects.map((p, i) => (
+            case 'projects': return projects.length > 0 ? <MainSec key={key} title="Projects" c={c} sp={sp} bf={BASE_FONT} headerStyle={headerSty} headerLetterSpacing={headerLetterSp}>{projects.map((p, i) => (
               <div key={p.id} style={{ marginTop: i > 0 ? '10px' : 0 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}><span style={{ fontWeight: 700, fontSize: fs(1.09) }}>{p.name}</span>{p.url && <a href={ensureUrl(p.url)} target="_blank" rel="noopener noreferrer" style={{ fontSize: fs(0.82), color: c, textDecoration: 'none' }}>{p.url}</a>}</div>
                 {p.description && <p style={{ fontSize: fs(0.95), color: '#6b7280', margin: '2px 0 0' }}>{p.description}</p>}
                 {p.technologies.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>{p.technologies.map((t, j) => <span key={j} style={{ fontSize: fs(0.82), padding: '1px 6px', background: '#f3f4f6', borderRadius: '3px', color: '#6b7280' }}>{t}</span>)}</div>}
               </div>))}</MainSec> : null;
-            case 'volunteering': return volunteering.length > 0 ? <MainSec key={key} title="Volunteering" c={c} sp={sp} bf={BASE_FONT}>{volunteering.map((v) => <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: fs(0.95) }}><span><strong>{v.role}</strong> — {v.organization}</span><span style={{ color: '#9ca3af' }}>{formatDateRange(v.startDate, v.endDate, v.current)}</span></div>)}</MainSec> : null;
-            case 'publications': return publications.length > 0 ? <MainSec key={key} title="Publications" c={c} sp={sp} bf={BASE_FONT}>{publications.map((p) => <p key={p.id} style={{ fontSize: fs(0.95) }}><strong>{p.title}</strong> — {p.publisher}, {formatDate(p.date)}</p>)}</MainSec> : null;
+            case 'volunteering': return volunteering.length > 0 ? <MainSec key={key} title="Volunteering" c={c} sp={sp} bf={BASE_FONT} headerStyle={headerSty} headerLetterSpacing={headerLetterSp}>{volunteering.map((v) => <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: fs(0.95) }}><span><strong>{v.role}</strong> — {v.organization}</span><span style={{ color: '#9ca3af' }}>{formatDateRange(v.startDate, v.endDate, v.current)}</span></div>)}</MainSec> : null;
+            case 'publications': return publications.length > 0 ? <MainSec key={key} title="Publications" c={c} sp={sp} bf={BASE_FONT} headerStyle={headerSty} headerLetterSpacing={headerLetterSp}>{publications.map((p) => <p key={p.id} style={{ fontSize: fs(0.95) }}><strong>{p.title}</strong> — {p.publisher}, {formatDate(p.date)}</p>)}</MainSec> : null;
             default: return null;
           }
         })}
@@ -108,6 +126,8 @@ function SideBar({ title, bf = 11, children }: { title: string; bf?: number; chi
   return <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '14px' }}><h3 style={{ fontSize: `${(bf * 0.82).toFixed(1)}px`, fontWeight: 700, letterSpacing: '2px', opacity: 0.6, marginBottom: '8px' }}>{title}</h3>{children}</div>;
 }
 
-function MainSec({ title, c, sp = 16, bf = 11, children }: { title: string; c: string; sp?: number; bf?: number; children: React.ReactNode }) {
-  return <section style={{ marginBottom: `${sp}px` }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: `${Math.min(sp, 12)}px` }}><div style={{ width: '4px', height: '16px', borderRadius: '2px', background: c }} /><h2 style={{ fontSize: `${(bf * 1.27).toFixed(1)}px`, fontWeight: 700, color: '#111', margin: 0 }}>{title}</h2></div>{children}</section>;
+function MainSec({ title, c, sp = 16, bf = 11, headerStyle = 'uppercase-underline' as HeaderStyle, headerLetterSpacing = '1.5px', children }: { title: string; c: string; sp?: number; bf?: number; headerStyle?: HeaderStyle; headerLetterSpacing?: string; children: React.ReactNode }) {
+  const displayText = formatHeaderText(title, headerStyle);
+  const showLine = showHeaderUnderline(headerStyle);
+  return <section style={{ marginBottom: `${sp}px` }}><div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: `${Math.min(sp, 12)}px` }}>{showLine && <div style={{ width: '4px', height: '16px', borderRadius: '2px', background: c }} />}<h2 style={{ fontSize: `${(bf * 1.27).toFixed(1)}px`, fontWeight: 700, color: '#111', margin: 0, letterSpacing: headerLetterSpacing, textTransform: headerStyle.startsWith('uppercase') ? 'uppercase' : 'none' }}>{displayText}</h2></div>{children}</section>;
 }

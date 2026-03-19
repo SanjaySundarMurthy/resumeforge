@@ -135,10 +135,10 @@ export default function ATSScorePanel() {
   return (
     <div className="space-y-5 p-1">
       {/* ── Score Circle ── */}
-      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-4 border border-gray-100">
+      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-4 border border-gray-100" role="region" aria-label="ATS Score">
         <div className="flex items-center gap-4">
-          <div className="relative w-28 h-28 shrink-0">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+          <div className="relative w-28 h-28 shrink-0" role="img" aria-label={`ATS Score: ${atsResult.score} out of 100. Rating: ${label.label}`}>
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120" aria-hidden="true">
               <circle cx="60" cy="60" r="54" stroke="#f1f5f9" strokeWidth="9" fill="none" />
               <circle
                 cx="60" cy="60" r="54"

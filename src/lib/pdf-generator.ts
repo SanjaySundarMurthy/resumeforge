@@ -24,6 +24,9 @@ export async function generatePDF(filename = 'resume.pdf'): Promise<void> {
   clone.style.top = '0';
   clone.style.width = '794px';
   clone.style.minHeight = '1123px';
+  clone.style.maxHeight = 'none';
+  clone.style.height = 'auto';
+  clone.style.overflow = 'visible';
   clone.style.background = '#fff';
   document.body.appendChild(clone);
 
@@ -106,6 +109,9 @@ export async function generatePNG(filename = 'resume.png'): Promise<void> {
   clone.style.left = '-9999px';
   clone.style.top = '0';
   clone.style.width = '794px';
+  clone.style.maxHeight = 'none';
+  clone.style.height = 'auto';
+  clone.style.overflow = 'visible';
   document.body.appendChild(clone);
 
   try {

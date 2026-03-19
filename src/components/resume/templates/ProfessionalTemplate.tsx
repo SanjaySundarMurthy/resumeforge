@@ -1,8 +1,8 @@
 /* ── Professional Template — Classic Corporate Single-Column ── */
 'use client';
-import type { ResumeData, ResumeStyle, BulletStyle, HeaderStyle, SkillDisplayMode, DateAlignment, NameSize } from '@/types/resume';
+import type { ResumeData, ResumeStyle, BulletStyle, HeaderStyle } from '@/types/resume';
 import { BULLET_SYMBOLS, NAME_SIZE_OPTIONS } from '@/types/resume';
-import { formatDateRange, formatDate, ensureUrl, isLinkable } from '@/lib/utils';
+import { formatDateRange, formatDate, ensureUrl } from '@/lib/utils';
 
 interface P { data: ResumeData; style: ResumeStyle; }
 
@@ -71,28 +71,13 @@ export default function ProfessionalTemplate({ data, style }: P) {
   const bodyLetterSpacing = `${style.letterSpacing ?? 0}px`;
   const headerLetterSpacing = `${style.headerLetterSpacing ?? 1.5}px`;
 
-  /* ── Date rendering helper ── */
-  const renderDateInfo = (dateStr: string, locationStr?: string) => {
-    if (dateAlign === 'right') {
-      return <span style={{ fontSize: fs(0.91), color: '#9ca3af', flexShrink: 0, marginLeft: '12px' }}>{dateStr}</span>;
-    }
-    return null;
-  };
-
-  const renderDateBelow = (dateStr: string, locationStr?: string) => {
-    if (dateAlign === 'left') {
-      return <p style={{ fontSize: fs(0.91), color: '#9ca3af', margin: '1px 0 0' }}>{dateStr}{locationStr ? ` · ${locationStr}` : ''}</p>;
-    }
-    return null;
-  };
-
   const renderSection = (key: string) => {
     switch (key) {
-      case 'summary': return summary ? <Sec key={key} t="Professional Summary" c={c} sp={sp} bf={BASE_FONT} headerStyle={headerSty} headerLetterSpacing={headerLetterSpacing}><p style={{ fontSize: fs(1.0), lineHeight: '1.65', color: '#374151', letterSpacing: bodyLetterSpacing }}>{summary}</p></Sec> : null;
+      case 'summary': return summary ? <Sec key={key} t="Professional Summary" c={c} sp={sp} bf={BASE_FONT} headerStyle={headerSty} headerLetterSpacing={headerLetterSpacing}><p style={{ fontSize: fs(1), lineHeight: '1.65', color: '#374151', letterSpacing: bodyLetterSpacing }}>{summary}</p></Sec> : null;
       case 'experience': return experience.length > 0 ? <Sec key={key} t="Work Experience" c={c} sp={sp} bf={BASE_FONT} headerStyle={headerSty} headerLetterSpacing={headerLetterSpacing}>{experience.map((e, i) => (
         <div key={e.id} style={{ marginTop: i > 0 ? '14px' : 0 }}>
           <div style={{ display: 'flex', justifyContent: dateAlign === 'right' ? 'space-between' : 'flex-start', alignItems: 'baseline', flexWrap: dateAlign === 'inline' ? 'wrap' : undefined, gap: dateAlign === 'inline' ? '8px' : undefined }}>
-            <div><span style={{ fontWeight: 700, fontSize: fs(1.09), color: '#111', letterSpacing: bodyLetterSpacing }}>{e.position}</span>{e.company && <span style={{ fontSize: fs(1.0), color: '#6b7280' }}>{' '}| {e.company}</span>}</div>
+            <div><span style={{ fontWeight: 700, fontSize: fs(1.09), color: '#111', letterSpacing: bodyLetterSpacing }}>{e.position}</span>{e.company && <span style={{ fontSize: fs(1), color: '#6b7280' }}>{' '}| {e.company}</span>}</div>
             {dateAlign === 'right' && <span style={{ fontSize: fs(0.91), color: '#9ca3af', flexShrink: 0, marginLeft: '12px' }}>{formatDateRange(e.startDate, e.endDate, e.current)}</span>}
             {dateAlign === 'inline' && <span style={{ fontSize: fs(0.91), color: '#9ca3af' }}>{formatDateRange(e.startDate, e.endDate, e.current)}</span>}
           </div>
@@ -104,7 +89,7 @@ export default function ProfessionalTemplate({ data, style }: P) {
         </div>))}</Sec> : null;
       case 'education': return education.length > 0 ? <Sec key={key} t="Education" c={c} sp={sp} bf={BASE_FONT} headerStyle={headerSty} headerLetterSpacing={headerLetterSpacing}>{education.map((e) => (
         <div key={e.id} style={{ display: dateAlign === 'right' ? 'flex' : 'block', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <div><span style={{ fontWeight: 700, fontSize: fs(1.09), letterSpacing: bodyLetterSpacing }}>{e.degree}{e.field ? ` in ${e.field}` : ''}</span><span style={{ color: '#6b7280', fontSize: fs(1.0) }}> — {e.institution}</span>{e.gpa && <span style={{ color: '#9ca3af', fontSize: fs(0.91), marginLeft: '6px' }}>GPA: {e.gpa}</span>}</div>
+          <div><span style={{ fontWeight: 700, fontSize: fs(1.09), letterSpacing: bodyLetterSpacing }}>{e.degree}{e.field ? ` in ${e.field}` : ''}</span><span style={{ color: '#6b7280', fontSize: fs(1) }}> — {e.institution}</span>{e.gpa && <span style={{ color: '#9ca3af', fontSize: fs(0.91), marginLeft: '6px' }}>GPA: {e.gpa}</span>}</div>
           {dateAlign === 'right' && <span style={{ fontSize: fs(0.91), color: '#9ca3af', flexShrink: 0 }}>{formatDateRange(e.startDate, e.endDate, false)}</span>}
           {dateAlign !== 'right' && <p style={{ fontSize: fs(0.91), color: '#9ca3af', margin: '1px 0 0' }}>{formatDateRange(e.startDate, e.endDate, false)}</p>}
         </div>

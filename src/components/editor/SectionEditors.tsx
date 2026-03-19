@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, memo } from 'react';
+import { useState, useId, memo } from 'react';
 import { useResumeStore } from '@/store/useResumeStore';
 import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp, ExternalLink,
@@ -14,7 +14,8 @@ import {
 function Input({ label, value, onChange, placeholder, type = 'text', pattern, title: inputTitle, required }: {
   label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string; pattern?: string; title?: string; required?: boolean;
 }) {
-  const id = `input-${label.toLowerCase().replace(/\s+/g, '-')}`;
+  const uid = useId();
+  const id = `input-${uid}-${label.toLowerCase().replace(/\s+/g, '-')}`;
   return (
     <div>
       <label htmlFor={id} className="input-label">{label}{required && <span className="text-red-500 ml-0.5" aria-hidden="true">*</span>}</label>
@@ -38,7 +39,8 @@ function Input({ label, value, onChange, placeholder, type = 'text', pattern, ti
 function TextArea({ label, value, onChange, placeholder, rows = 3 }: {
   label: string; value: string; onChange: (v: string) => void; placeholder?: string; rows?: number;
 }) {
-  const id = `textarea-${label.toLowerCase().replace(/\s+/g, '-')}`;
+  const uid = useId();
+  const id = `textarea-${uid}-${label.toLowerCase().replace(/\s+/g, '-')}`;
   return (
     <div>
       <label htmlFor={id} className="input-label">{label}</label>
@@ -212,7 +214,7 @@ export const ExperienceEditor = memo(function ExperienceEditor() {
             <Input label="Start Date" value={exp.startDate} onChange={(v) => updateExperience(exp.id, { startDate: v })} placeholder="2020-01" type="month" />
             <Input label="End Date" value={exp.endDate} onChange={(v) => updateExperience(exp.id, { endDate: v })} placeholder="2023-06" type="month" />
           </div>
-          <Toggle label="I currently work here" checked={exp.current} onChange={(v) => updateExperience(exp.id, { current: v })} />
+          <Toggle label="I currently work here" checked={exp.current} onChange={(v) => updateExperience(exp.id, { current: v, ...(v ? { endDate: '' } : {}) })} />
           <div>
             <label className="input-label">Achievements & Highlights</label>
             <ArrayEditor
@@ -489,6 +491,7 @@ export const VolunteeringEditor = memo(function VolunteeringEditor() {
             <Input label="Start Date" value={vol.startDate} onChange={(v) => updateVolunteering(vol.id, { startDate: v })} placeholder="2022-01" type="month" />
             <Input label="End Date" value={vol.endDate} onChange={(v) => updateVolunteering(vol.id, { endDate: v })} placeholder="2023-06" type="month" />
           </div>
+          <Toggle label="I currently volunteer here" checked={vol.current} onChange={(v) => updateVolunteering(vol.id, { current: v })} />
           <TextArea label="Description" value={vol.description} onChange={(v) => updateVolunteering(vol.id, { description: v })} placeholder="What you did..." rows={2} />
         </SectionCard>
       ))}
@@ -522,6 +525,7 @@ export const PublicationsEditor = memo(function PublicationsEditor() {
             <Input label="Date" value={pub.date} onChange={(v) => updatePublication(pub.id, { date: v })} placeholder="2023-06" type="month" />
           </div>
           <Input label="URL" value={pub.url} onChange={(v) => updatePublication(pub.id, { url: v })} placeholder="doi.org/..." type="url" />
+          <TextArea label="Description" value={pub.description} onChange={(v) => updatePublication(pub.id, { description: v })} placeholder="Brief summary of the publication..." rows={2} />
         </SectionCard>
       ))}
       <button onClick={addPublication} className="btn-secondary w-full text-sm">

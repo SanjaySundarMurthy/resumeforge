@@ -46,7 +46,7 @@ const FILLER_PHRASES = [
 const WEAK_VERBS = ['worked','helped','assisted','did','made','used','tried','got','had','done'];
 
 /* ── Score Weights ──────────────────────────────────────── */
-const W = { contact: 10, summary: 15, experience: 30, education: 10, skills: 15, format: 10, length: 5, jd: 10 };
+const W = { contact: 10, summary: 12, experience: 28, education: 8, skills: 14, format: 12, length: 6, jd: 10 };
 
 /* ── Main Scoring Function ──────────────────────────────── */
 export function calculateATSScore(
@@ -91,6 +91,12 @@ export function calculateATSScore(
 
       if (METRICS_PATTERN.test(txt)) s += 3;
       else t.push({ severity: 'warning', section: 'Summary', message: 'Summary has zero numbers — "improved performance" means nothing without proof', fix: 'Add one metric: "reduced churn by 23%" or "led team of 8" or "serving 500K+ users"', impact: 3 });
+
+      // Check for keyword-rich summary
+      const summaryLower = txt.toLowerCase();
+      const techHits = Array.from(TECH_KEYWORDS).filter(k => summaryLower.includes(k)).length;
+      const mgmtHits = Array.from(MANAGEMENT_KEYWORDS).filter(k => summaryLower.includes(k)).length;
+      if (techHits + mgmtHits === 0) t.push({ severity: 'tip', section: 'Summary', message: 'Summary lacks industry keywords — ATS may not rank this resume for relevant roles', fix: 'Include 2-3 key skills or domain terms that match your target role', impact: 2 });
 
       FILLER_PHRASES.forEach(p => { if (txt.toLowerCase().includes(p)) t.push({ severity: 'warning', section: 'Summary', message: `Weak phrase: "${p}" — sounds like every other candidate`, fix: `Remove "${p}". Replace with a specific achievement.`, impact: 2 }); });
     }
@@ -144,12 +150,15 @@ export function calculateATSScore(
       else t.push({ severity: 'warning', section: 'Experience', message: `${missingDates} job(s) missing dates — ATS cannot calculate total experience years`, fix: 'Add start/end dates to every role (YYYY-MM format)', impact: 3 });
 
       const ratio = totalBullets > 0 ? metricBullets / totalBullets : 0;
-      if (ratio < 0.25) {
-        t.push({ severity: 'critical', section: 'Experience', message: `Only ${Math.round(ratio*100)}% of bullets have measurable results — below the 40% threshold. Your resume reads like a job description, not a track record.`, fix: `Convert 3+ bullets to metrics NOW: "optimized queries" → "optimized SQL queries, reducing p99 latency from 2.1s → 340ms (84% faster)"`, impact: 10 });
+      if (ratio < 0.2) {
+        t.push({ severity: 'critical', section: 'Experience', message: `Only ${Math.round(ratio*100)}% of bullets have measurable results — below the 25% minimum threshold. Your resume reads like a job description, not a track record.`, fix: `Convert 3+ bullets to metrics NOW: "optimized queries" → "optimized SQL queries, reducing p99 latency from 2.1s → 340ms (84% faster)"`, impact: 10 });
         s += 4;
-      } else if (ratio < 0.5) {
-        t.push({ severity: 'warning', section: 'Experience', message: `${Math.round(ratio*100)}% bullets have metrics — good but aim for 50%+. Top 10% candidates hit 65%.`, fix: 'Pick 3 more bullets and add numbers: users, %, $, speed, team size, time saved', impact: 5 });
-        s += 9;
+      } else if (ratio < 0.4) {
+        t.push({ severity: 'warning', section: 'Experience', message: `${Math.round(ratio*100)}% bullets have metrics — decent but aim for 40%+. Top 10% candidates hit 65%.`, fix: 'Pick 3 more bullets and add numbers: users, %, $, speed, team size, time saved', impact: 5 });
+        s += 8;
+      } else if (ratio < 0.6) {
+        s += 10;
+        t.push({ severity: 'tip', section: 'Experience', message: `${Math.round(ratio*100)}% metrics coverage is good — push for 60%+ to stand out`, fix: 'Find 1-2 more bullets where you can add quantified results', impact: 2 });
       } else { s += 12; }
 
       if (weakBullets > 1) t.push({ severity: 'warning', section: 'Experience', message: `${weakBullets} bullets use passive verbs (worked/helped/made) — screams junior mindset`, fix: 'Use power verbs: "worked on X" → "Engineered X, reducing cost by 30%"', impact: 3 });
@@ -215,10 +224,18 @@ export function calculateATSScore(
     const totalItems = data.experience.reduce((a, e) => a + e.highlights.filter(Boolean).length, 0) + data.skills.length + data.education.length;
 
     if (totalItems < 5) t.push({ severity: 'critical', section: 'Format', message: 'Resume is nearly empty — will rank last in every ATS stack', fix: 'Complete all sections before submitting to any role', impact: 8 });
+    else if (totalItems < 10) { s += 3; t.push({ severity: 'warning', section: 'Format', message: 'Resume is thin on content — ATS penalizes sparse resumes', fix: 'Add more experience bullets, skills, or relevant projects', impact: 4 }); }
     else s += 6;
 
-    if (data.personalInfo.email && data.personalInfo.phone) s += 4;
-    else t.push({ severity: 'critical', section: 'Format', message: 'Missing essential contact details — ATS parser fails on incomplete headers', fix: 'Email + Phone must be in the header. Non-negotiable.', impact: 4 });
+    if (data.personalInfo.email && data.personalInfo.phone) s += 3;
+    else t.push({ severity: 'critical', section: 'Format', message: 'Missing essential contact details — ATS parser fails on incomplete headers', fix: 'Email + Phone must be in the header. Non-negotiable.', impact: 3 });
+
+    // Projects bonus
+    if (data.projects.length > 0) s += 1;
+    // Certifications bonus
+    if (data.certifications.length > 0) s += 1;
+    // Languages or volunteering bonus (well-rounded profile)
+    if (data.languages.length > 0 || data.volunteering.length > 0) s += 1;
 
     brutalTips.push(...t);
     breakdown.push({ category: 'Formatting & Completeness', score: Math.min(s, W.format), maxScore: W.format, tips: t.map(x => x.message) });
@@ -231,9 +248,10 @@ export function calculateATSScore(
     const allText = [data.summary, ...data.experience.flatMap(e => [...e.highlights, e.description]), ...data.skills.flatMap(sk => sk.items)].join(' ');
     const wc = allText.split(/\s+/).filter(Boolean).length;
 
-    if (wc < 150) { t.push({ severity: 'critical', section: 'Length', message: `Only ~${wc} words — ATS parsing finds almost nothing to analyze`, fix: 'A strong resume needs 400-800 words of real content', impact: 4 }); }
-    else if (wc > 1300) { s += 3; t.push({ severity: 'warning', section: 'Length', message: `~${wc} words exceeds the ideal 1-2 page range. Recruiters stop reading.`, fix: 'Cut roles older than 10 years. Remove generic bullets. Focus on impact.', impact: 2 }); }
-    else { s += 5; }
+    if (wc < 100) { t.push({ severity: 'critical', section: 'Length', message: `Only ~${wc} words — ATS parsing finds almost nothing to analyze`, fix: 'A strong resume needs 400-800 words of real content', impact: 5 }); }
+    else if (wc < 250) { s += 2; t.push({ severity: 'warning', section: 'Length', message: `Only ~${wc} words — thin resume will rank poorly against fuller applications`, fix: 'Expand experience bullets and add more quantified achievements to reach 400+ words', impact: 3 }); }
+    else if (wc > 1300) { s += 4; t.push({ severity: 'warning', section: 'Length', message: `~${wc} words exceeds the ideal 1-2 page range. Recruiters stop reading.`, fix: 'Cut roles older than 10 years. Remove generic bullets. Focus on impact.', impact: 2 }); }
+    else { s += 6; }
 
     brutalTips.push(...t);
     breakdown.push({ category: 'Content Length & Depth', score: Math.min(s, W.length), maxScore: W.length, tips: t.map(x => x.message) });
@@ -307,9 +325,9 @@ export function getScoreLabel(score: number): { label: string; color: string; em
   if (score >= 90) return { label: 'ATS Champion', color: '#059669', emoji: '🏆', advice: 'Elite. This resume will pass virtually every ATS filter and impress recruiters.' };
   if (score >= 80) return { label: 'Strong', color: '#10b981', emoji: '✅', advice: 'Very competitive. Address remaining warnings to dominate the stack.' };
   if (score >= 70) return { label: 'Good', color: '#3b82f6', emoji: '👍', advice: 'Above average. Fix the warnings and you\'re in the top 25%.' };
-  if (score >= 60) return { label: 'Needs Work', color: '#f59e0b', emoji: '⚠️', advice: 'Mediocre. Recruiters pass on resumes like this daily. Fix critical issues now.' };
-  if (score >= 45) return { label: 'High Risk', color: '#ef4444', emoji: '🚨', advice: 'Will be rejected by most ATS. This needs significant work before submitting.' };
-  return { label: 'Will Be Rejected', color: '#7f1d1d', emoji: '💀', advice: 'Auto-rejected by 95% of ATS. Do not submit this anywhere. Fix everything first.' };
+  if (score >= 55) return { label: 'Needs Work', color: '#f59e0b', emoji: '⚠️', advice: 'Average. Fix the critical issues to improve your ranking significantly.' };
+  if (score >= 40) return { label: 'High Risk', color: '#ef4444', emoji: '🚨', advice: 'Will be filtered out by most ATS. Address critical issues before submitting.' };
+  return { label: 'Incomplete', color: '#7f1d1d', emoji: '❌', advice: 'Resume is too incomplete for ATS processing. Fill in the core sections first.' };
 }
 
 export function getKeywordMatchColor(density: number): string {
